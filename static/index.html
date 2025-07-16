@@ -338,7 +338,11 @@
       const fileSignature = files.map(item => 
         `${item.file.webkitRelativePath || item.file.name}-${item.file.size}`
       ).sort().join('|');
-      return 'task_' + btoa(fileSignature).replace(/[+/=]/g, '').substring(0, 16);
+      
+      // 使用安全的编码方式处理任何字符
+      return 'task_' + encodeURIComponent(fileSignature)
+        .replace(/%/g, '')
+        .substring(0, 16);
     }
 
     function saveTaskProgress() {

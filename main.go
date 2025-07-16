@@ -7,13 +7,15 @@ import (
 
 func main() {
 	r := gin.Default()
+	
+	// 配置HTML模板
+	r.LoadHTMLGlob("static/*.html")
 
 	// 创建 go-uploader 路由组
 	goUploader := r.Group("/go-uploader")
 	{
 		// 配置静态文件服务
 		goUploader.Static("/static", "./static")
-		goUploader.LoadHTMLGlob("static/*.html")
 		
 		// 设置根路径重定向到index.html
 		goUploader.GET("/", func(c *gin.Context) {
