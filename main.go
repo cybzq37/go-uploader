@@ -1,11 +1,26 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-uploader/handler"
+	"go-uploader/utils"
+	"log"
 )
 
+const configFile = "./config.json"
+
 func main() {
+	// 加载配置文件
+	if err := utils.LoadConfig(configFile); err != nil {
+		log.Printf("加载配置文件失败: %v，将使用默认配置", err)
+	}
+	
+	// 初始化配置目录
+	if err := utils.InitDirectories(); err != nil {
+		log.Fatalf("初始化目录失败: %v", err)
+	}
+	
 	r := gin.Default()
 	
 	// 配置HTML模板
@@ -28,5 +43,8 @@ func main() {
 		goUploader.GET("/upload_status", handler.UploadStatus)
 	}
 
-	r.Run(":18101") // 监听端口
+	// 使用配置中的端口
+	port := fmt.Sprintf(":%s", utils.Config.Port)
+	log.Printf("服务器启动，监听端口: %s", utils.Config.Port)
+	r.Run(port) // 监听端口
 }

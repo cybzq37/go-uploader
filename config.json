@@ -1,0 +1,5 @@
+{
+  "upload_dir": "./upload",
+  "merged_dir": "./merged",
+  "port": "9876"
+}

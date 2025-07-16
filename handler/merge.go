@@ -12,8 +12,6 @@ import (
 	"strings"
 )
 
-const MergedDir = "./merged"
-
 func MergeChunks(c *gin.Context) {
 	fileID := c.PostForm("file_id")
 	filename := c.PostForm("filename")
@@ -26,7 +24,7 @@ func MergeChunks(c *gin.Context) {
 		return
 	}
 
-	srcDir := filepath.Join(UploadDir, fileID)
+	srcDir := filepath.Join(utils.Config.UploadDir, fileID)
 	
 	// 如果提供了相对路径，使用相对路径；否则使用文件名
 	var dstPath string
@@ -37,14 +35,17 @@ func MergeChunks(c *gin.Context) {
 			c.String(400, "Invalid relative path")
 			return
 		}
-		dstPath = filepath.Join(MergedDir, cleanPath)
+		dstPath = filepath.Join(utils.Config.MergedDir, cleanPath)
 	} else {
-		dstPath = filepath.Join(MergedDir, filename)
+		dstPath = filepath.Join(utils.Config.MergedDir, filename)
 	}
 	
 	// 确保目标目录存在
 	dstDir := filepath.Dir(dstPath)
-	os.MkdirAll(dstDir, os.ModePerm)
+	if err := utils.EnsureDirectory(dstDir); err != nil {
+		c.String(500, "创建目标目录失败: %v", err)
+		return
+	}
 
 	dstFile, err := os.Create(dstPath)
 	if err != nil {

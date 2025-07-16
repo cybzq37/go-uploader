@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go-uploader/utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 
 func UploadStatus(c *gin.Context) {
 	fileID := c.Query("file_id")
-	dir := filepath.Join(UploadDir, fileID)
+	dir := filepath.Join(utils.Config.UploadDir, fileID)
 
 	files, err := os.ReadDir(dir)
 	if err != nil {

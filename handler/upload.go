@@ -10,8 +10,6 @@ import (
 	"strconv"
 )
 
-const UploadDir = "./upload"
-
 func UploadChunk(c *gin.Context) {
 	fileID := c.PostForm("file_id")
 	chunkIndex := c.PostForm("chunk_index")
@@ -30,8 +28,11 @@ func UploadChunk(c *gin.Context) {
 		return
 	}
 
-	saveDir := filepath.Join(UploadDir, fileID)
-	os.MkdirAll(saveDir, os.ModePerm)
+	saveDir := filepath.Join(utils.Config.UploadDir, fileID)
+	if err := utils.EnsureDirectory(saveDir); err != nil {
+		c.String(500, "创建上传目录失败: %v", err)
+		return
+	}
 
 	chunkName := fmt.Sprintf("%06d.part", index)
 	savePath := filepath.Join(saveDir, chunkName)

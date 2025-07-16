@@ -334,15 +334,28 @@
     });
 
     function generateTaskId(files) {
-      // 基于文件列表生成唯一的任务ID
-      const fileSignature = files.map(item => 
-        `${item.file.webkitRelativePath || item.file.name}-${item.file.size}`
-      ).sort().join('|');
+      // 使用文件数量、总大小和文件夹名称生成ID
+      const fileCount = files.length;
+      const totalSize = files.reduce((sum, item) => sum + item.file.size, 0);
       
-      // 使用安全的编码方式处理任何字符
-      return 'task_' + encodeURIComponent(fileSignature)
-        .replace(/%/g, '')
-        .substring(0, 16);
+      // 提取文件夹名称（如果有的话）
+      let folderName = '';
+      if (files.length > 0 && files[0].file.webkitRelativePath) {
+        folderName = files[0].file.webkitRelativePath.split('/')[0];
+      }
+      
+      // 生成简短的签名
+      const signature = `${folderName}-${fileCount}-${totalSize}`;
+      
+      // 使用简单的哈希算法
+      let hash = 0;
+      for (let i = 0; i < signature.length; i++) {
+        const char = signature.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // 转换为32位整数
+      }
+      
+      return 'task_' + Math.abs(hash).toString(36).substring(0, 8);
     }
 
     function saveTaskProgress() {
@@ -351,12 +364,12 @@
       const taskData = {
         id: currentTaskId,
         name: document.getElementById("taskName").value || `任务_${new Date().toLocaleString()}`,
-        files: uploadQueue.map(item => ({
-          name: item.file.name,
-          size: item.file.size,
-          relativePath: item.file.webkitRelativePath || "",
-          status: item.status
-        })),
+        // 只存储必要信息，不存储完整文件列表
+        summary: {
+          fileCount: uploadQueue.length,
+          totalSize: uploadQueue.reduce((sum, item) => sum + item.file.size, 0),
+          folderName: uploadQueue[0]?.file.webkitRelativePath?.split('/')[0] || ''
+        },
         config: {
           chunkSize: CHUNK_SIZE,
           concurrentLimit: concurrentLimit
