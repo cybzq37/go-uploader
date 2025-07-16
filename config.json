@@ -1,5 +1,14 @@
 {
   "upload_dir": "./upload",
   "merged_dir": "./merged",
-  "port": "9876"
+  "port": "9876",
+  "max_file_size": 10737418240,
+  "max_chunk_size": 104857600,
+  "cleanup_interval": 3600,
+  "retry_max_attempts": 3,
+  "retry_initial_delay": 1000,
+  "concurrent_uploads": 5,
+  "enable_integrity_check": true,
+  "enable_atomic_operations": true,
+  "log_level": "info"
 }

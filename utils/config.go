@@ -8,16 +8,34 @@ import (
 
 // AppConfig 存储应用程序配置
 type AppConfig struct {
-	UploadDir string `json:"upload_dir"` // 上传临时目录
-	MergedDir string `json:"merged_dir"` // 合并后文件存储目录
-	Port      string `json:"port"`       // 服务器监听端口
+	UploadDir              string `json:"upload_dir"`               // 上传临时目录
+	MergedDir              string `json:"merged_dir"`               // 合并后文件存储目录
+	Port                   string `json:"port"`                     // 服务器监听端口
+	MaxFileSize            int64  `json:"max_file_size"`            // 最大文件大小（字节）
+	MaxChunkSize           int64  `json:"max_chunk_size"`           // 最大分片大小（字节）
+	CleanupInterval        int64  `json:"cleanup_interval"`         // 清理间隔（秒）
+	RetryMaxAttempts       int    `json:"retry_max_attempts"`       // 最大重试次数
+	RetryInitialDelay      int64  `json:"retry_initial_delay"`      // 初始重试延迟（毫秒）
+	ConcurrentUploads      int    `json:"concurrent_uploads"`       // 并发上传数
+	EnableIntegrityCheck   bool   `json:"enable_integrity_check"`   // 启用完整性检查
+	EnableAtomicOperations bool   `json:"enable_atomic_operations"` // 启用原子操作
+	LogLevel               string `json:"log_level"`                // 日志级别
 }
 
 // Config 全局配置实例
 var Config = AppConfig{
-	UploadDir: "./upload",
-	MergedDir: "./merged",
-	Port:      "9876",
+	UploadDir:              "./upload",
+	MergedDir:              "./merged",
+	Port:                   "9876",
+	MaxFileSize:            10 * 1024 * 1024 * 1024, // 10GB
+	MaxChunkSize:           100 * 1024 * 1024,       // 100MB
+	CleanupInterval:        3600,                    // 1小时
+	RetryMaxAttempts:       3,
+	RetryInitialDelay:      1000, // 1秒
+	ConcurrentUploads:      5,
+	EnableIntegrityCheck:   true,
+	EnableAtomicOperations: true,
+	LogLevel:               "info",
 }
 
 // LoadConfig 从配置文件加载配置

@@ -13,6 +13,6 @@ COPY static/ ./static/
 
 RUN mkdir -p /app/upload /app/merged
 
-EXPOSE 18101
+EXPOSE 9876
 
 CMD ["./uploader"]
