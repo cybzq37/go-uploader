@@ -42,10 +42,6 @@
   </script>
   
   <style>
-    .upload-area-hover {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
-    }
-    
     @keyframes shimmer {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
@@ -94,7 +90,7 @@
     <!-- 系统状态头部 -->
     <div class="card p-4 mb-4">
       <h1 class="text-2xl font-bold text-gray-800 text-center mb-4">
-        🚀 文件上传系统
+        文件上传系统
       </h1>
       
       <!-- 系统状态指示器 -->
@@ -184,157 +180,100 @@
           </div>
         </div>
 
-        <!-- 文件上传区域 -->
+                <!-- 文件上传区域 -->
         <div class="card p-4">
-          <div 
-            @drop.prevent="handleDrop($event)"
-            @dragover.prevent="dragOver = true"
-            @dragleave.prevent="dragOver = false"
-            :class="dragOver ? 'upload-area-hover' : ''"
-            class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-all duration-300 hover:bg-gray-50">
-            
-            <div class="text-4xl mb-3" :class="dragOver ? 'animate-bounce-slow' : ''">📁</div>
-            <p class="text-gray-700 text-base mb-2">拖拽文件到此处或使用下方按钮选择</p>
-            <p class="text-gray-500 text-sm">支持单文件和文件夹上传，自动断点续传</p>
-            <p class="text-gray-400 text-xs mt-1">💡 文件夹选择：进入目标文件夹后点击"选择文件夹"按钮</p>
-            
-            <input type="file" 
-                   x-ref="fileInput" 
-                   @change="handleFileSelect($event)" 
-                   multiple 
-                   class="hidden">
-            <input type="file" 
-                   x-ref="folderInput" 
-                   @change="handleFolderSelect($event)" 
-                   webkitdirectory 
-                   class="hidden">
-  </div>
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📋 任务列表</h3>
+          
+          <input type="file" 
+                 x-ref="fileInput" 
+                 @change="handleFileSelect($event)" 
+                 multiple 
+                 class="hidden">
+          <input type="file" 
+                 x-ref="folderInput" 
+                 @change="handleFolderSelect($event)" 
+                 webkitdirectory
+                 class="hidden">
   
           <!-- 操作按钮 -->
-          <div class="flex flex-wrap gap-2 mt-4">
+          <div class="flex flex-wrap gap-2">
             <button @click="selectFiles()" 
-                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
+                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200"
+                    title="选择文件进行上传">
               📄 选择文件
             </button>
-            
             <button @click="selectFolder()" 
-                    class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm transition-colors duration-200"
-                    title="选择整个文件夹进行上传，包含子文件夹中的所有文件">
+                    class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm transition-colors duration-200"
+                    title="选择文件夹进行上传">
               📁 选择文件夹
             </button>
-            
-            <button @click="startUpload()" 
-                    :disabled="files.length === 0 || (isUploading && !isPaused)"
-                    class="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded text-sm transition-colors duration-200">
-              <span x-show="!isUploading">🚀 开始上传</span>
-              <span x-show="isUploading && isPaused">▶️ 继续上传</span>
+            <button @click="refreshServerTasks()" 
+                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
+              🔄 刷新
             </button>
-            
-            <button x-show="isUploading && !isPaused" 
-                    @click="pauseUpload()" 
+            <button @click="cleanupTasks()" 
                     class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm transition-colors duration-200">
-              ⏸️ 暂停
-            </button>
-            
-            <button x-show="isUploading" 
-                    @click="cancelUpload()" 
-                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors duration-200">
-              ❌ 取消
+              🧹 清理
             </button>
           </div>
-        </div>
-
-        <!-- 进度显示 -->
-        <div x-show="isUploading || progress.total > 0" class="card p-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 上传进度</h3>
           
-          <div class="mb-3">
-            <div class="flex justify-between text-gray-700 mb-2 text-sm">
-              <span x-text="progress.completed + '/' + progress.total + ' (' + progress.percentage.toFixed(1) + '%)'"></span>
-              <span x-text="remainingTime"></span>
-            </div>
-            
-            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full relative progress-shimmer transition-all duration-300" 
-                   :style="'width: ' + progress.percentage + '%'"></div>
-            </div>
+          <div x-show="serverTasks.length === 0" class="text-center py-8 text-gray-500">
+            暂无任务，请选择要上传的文件
           </div>
           
-          <!-- 统计信息 -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="text-center p-2 bg-blue-50 rounded border border-blue-200">
-              <div class="text-lg font-bold text-gray-800" x-text="progress.completed"></div>
-              <div class="text-gray-600 text-xs">已完成</div>
-            </div>
-            <div class="text-center p-2 bg-red-50 rounded border border-red-200">
-              <div class="text-lg font-bold text-gray-800" x-text="progress.failed"></div>
-              <div class="text-gray-600 text-xs">失败</div>
-            </div>
-            <div class="text-center p-2 bg-green-50 rounded border border-green-200">
-              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.totalSize)"></div>
-              <div class="text-gray-600 text-xs">总大小</div>
-            </div>
-            <div class="text-center p-2 bg-purple-50 rounded border border-purple-200">
-              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.uploadedSize)"></div>
-              <div class="text-gray-600 text-xs">已上传</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 文件列表 -->
-        <div class="card p-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-3">📋 文件列表</h3>
-          
-          <div x-show="files.length === 0" class="text-center py-8 text-gray-500">
-            暂无文件，请选择要上传的文件
-          </div>
-          
-          <div x-show="files.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
-            <div class="bg-gray-50 rounded p-2 mb-3 text-sm">
-              <span class="text-gray-700 font-medium">
-                共 <span x-text="files.length"></span> 个任务，总大小: <span x-text="formatFileSize(totalFileSize)"></span>
-              </span>
-            </div>
-            
-            <template x-for="file in files" :key="file.id">
+          <div x-show="serverTasks.length > 0" class="space-y-2 max-h-96 overflow-y-auto">    
+            <!-- 服务器任务列表 -->
+            <template x-for="task in serverTasks" :key="task.task_id || task.file_id">
               <div>
-                <!-- 主任务（文件夹或单文件） -->
                 <div class="bg-gray-50 rounded p-3 flex items-center justify-between" 
-                     :class="file.taskType === 'folder' ? 'border-l-4 border-purple-400' : 'border-l-4 border-blue-400'">
+                     :class="task.task_type === 'folder' ? 'border-l-4 border-purple-400' : 'border-l-4 border-blue-400'">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center space-x-2">
-                      <span x-show="file.taskType === 'folder'">📁</span>
-                      <span x-show="file.taskType === 'file'">📄</span>
-                      <div class="text-gray-800 font-medium truncate text-sm" x-text="file.name"></div>
+                      <span x-show="task.task_type === 'folder'">📁</span>
+                      <span x-show="task.task_type === 'file'">📄</span>
+                      <div class="text-gray-800 font-medium truncate text-sm" 
+                           x-text="task.folder_name || task.filename"></div>
                     </div>
                     <div class="text-gray-600 text-xs mt-1">
-                      <span x-text="formatFileSize(file.size)"></span>
-                      <span x-show="file.progress > 0" x-text="'(' + file.progress + '%)'"></span>
-                      <span x-show="file.taskType === 'folder'" x-text="'- ' + (file.totalFiles || 0) + ' 个文件'"></span>
-                      <span x-show="file.taskType === 'folder' && file.completedFiles !== undefined" 
-                            x-text="'- 已完成 ' + file.completedFiles + '/' + file.totalFiles"></span>
+                      <span x-text="formatFileSize(task.file_size)"></span>
+                      <span x-show="task.completion_rate > 0" x-text="'(' + (task.completion_rate || 0).toFixed(1) + '%)'"></span>
+                      <span x-show="task.task_type === 'folder'" x-text="'- ' + (task.total_files || 0) + ' 个文件'"></span>
+                      <span x-show="task.task_type === 'folder' && task.completed_files !== undefined" 
+                            x-text="'- 已完成 ' + task.completed_files + '/' + task.total_files"></span>
                     </div>
                   </div>
                   
                   <div class="ml-3 flex items-center space-x-2">
-                    <div x-show="file.taskType === 'folder'" class="text-xs text-gray-500">
-                      <span x-text="file.taskType === 'folder' ? '文件夹任务' : '文件任务'"></span>
-                    </div>
-                    <div x-show="file.isRecovered" class="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">
-                      恢复
-                    </div>
                     <span class="px-2 py-1 rounded text-xs font-medium"
-                          :class="getStatusClass(file.status)" 
-                          x-text="getStatusText(file.status)"></span>
+                          :class="getStatusClass(task.status)" 
+                          x-text="getStatusText(task.status)"></span>
                   </div>
                 </div>
                 
-                <!-- 文件夹任务的进度条 -->
-                <div x-show="file.taskType === 'folder' && file.progress > 0" class="mt-2 px-3">
+                <!-- 进度条 -->
+                <div x-show="task.completion_rate > 0" class="mt-2 px-3">
                   <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="h-full bg-purple-400 rounded-full transition-all duration-300" 
-                         :style="'width: ' + file.progress + '%'"></div>
+                    <div class="h-full rounded-full transition-all duration-300" 
+                         :class="task.task_type === 'folder' ? 'bg-purple-400' : 'bg-blue-400'"
+                         :style="'width: ' + (task.completion_rate || 0) + '%'"></div>
                   </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="mt-2 px-3 flex gap-2">
+                  <button x-show="task.status === 'paused' || task.status === 'failed' || task.status === 'uploading'" 
+                          @click="selectRecoveryTask(task.task_id || task.file_id, task.task_type)"
+                          class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded">
+                    恢复
+                  </button>
+                  <button @click="deleteTask(task.task_id || task.file_id)"
+                          class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded">
+                    删除
+                  </button>
+                  <button @click="showTaskDetail(task)"
+                          class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded">
+                    详情
+                  </button>
                 </div>
               </div>
             </template>
@@ -359,90 +298,40 @@
       <!-- 侧边栏 -->
       <div class="space-y-4">
         
-        <!-- 任务管理 -->
+        <!-- 上传进度 -->
         <div class="card p-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 任务管理</h3>
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 上传进度</h3>
           
-          <div class="space-y-2 mb-3">
-            <button @click="showRecoveryManager()" 
-                    class="w-full px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-sm transition-colors duration-200">
-              🔄 恢复任务管理
-            </button>
-            <button @click="refreshServerTasks()" 
-                    class="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
-              🔄 刷新任务
-            </button>
-            <button @click="cleanupTasks()" 
-                    class="w-full px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm transition-colors duration-200">
-              🧹 清理任务
-            </button>
-            <button @click="recoverUnfinishedTasks()" 
-                    class="w-full px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm transition-colors duration-200">
-              🔄 恢复任务
-            </button>
-          </div>
-          
-          <div class="space-y-2 max-h-64 overflow-y-auto">
-            <div x-show="serverTasks.length === 0" class="text-center py-6 text-gray-500 text-sm">
-              点击刷新加载服务器任务
+          <div class="mb-3">
+            <div class="flex justify-between text-gray-700 mb-2 text-sm">
+              <span x-text="progress.completed + '/' + progress.total + ' (' + progress.percentage.toFixed(1) + '%)'"></span>
+              <span x-text="remainingTime"></span>
             </div>
             
-            <template x-for="task in serverTasks" :key="task.task_id || task.file_id">
-              <div class="bg-gray-50 rounded p-2" 
-                   :class="task.task_type === 'folder' ? 'border-l-2 border-purple-400' : 'border-l-2 border-blue-400'">
-                <div class="flex justify-between items-start mb-1">
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center space-x-1">
-                      <span x-show="task.task_type === 'folder'">📁</span>
-                      <span x-show="task.task_type === 'file'">📄</span>
-                      <div class="text-gray-800 font-medium text-xs truncate" 
-                           x-text="task.folder_name || task.filename"></div>
-                    </div>
-                    <div class="text-gray-600 text-xs">
-                      <span x-text="formatFileSize(task.file_size)"></span>
-                      <span x-show="task.task_type === 'folder'" 
-                            x-text="'- ' + (task.total_files || 0) + ' 个文件'"></span>
-                      <span x-show="task.task_type === 'folder' && task.completed_files !== undefined" 
-                            x-text="'(已完成 ' + task.completed_files + ')'"></span>
-                    </div>
-                  </div>
-                  <div class="ml-2">
-                    <span class="px-1 py-0.5 rounded text-xs"
-                          :class="getStatusClass(task.status)" 
-                          x-text="getStatusText(task.status)"></span>
-                  </div>
-                </div>
-                
-                <!-- 进度条 -->
-                <div class="w-full bg-gray-200 rounded-full h-1 mb-1">
-                  <div class="h-full rounded-full transition-all duration-300" 
-                       :class="task.task_type === 'folder' ? 'bg-purple-400' : 'bg-blue-400'"
-                       :style="'width: ' + (task.completion_rate || 0) + '%'"></div>
-                </div>
-                
-                <!-- 操作按钮 -->
-                <div class="flex gap-1">
-                  <button x-show="task.status === 'paused' || task.status === 'failed'" 
-                          @click="resumeTask(task.task_id || task.file_id)"
-                          class="text-xs px-1 py-0.5 bg-green-500 hover:bg-green-600 text-white rounded">
-                    恢复
-                  </button>
-                  <button x-show="task.status === 'uploading'" 
-                          @click="pauseTask(task.task_id || task.file_id)"
-                          class="text-xs px-1 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded">
-                    暂停
-                  </button>
-                  <button @click="deleteTask(task.task_id || task.file_id)"
-                          class="text-xs px-1 py-0.5 bg-red-500 hover:bg-red-600 text-white rounded">
-                    删除
-                  </button>
-                  <button @click="showTaskDetail(task)"
-                          class="text-xs px-1 py-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded">
-                    详情
-                  </button>
-                </div>
-              </div>
-            </template>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full relative progress-shimmer transition-all duration-300" 
+                   :style="'width: ' + progress.percentage + '%'"></div>
+            </div>
+          </div>
+          
+          <!-- 统计信息 -->
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="text-center p-2 bg-blue-50 rounded border border-blue-200">
+              <div class="text-lg font-bold text-gray-800" x-text="progress.completed"></div>
+              <div class="text-gray-600 text-xs">已完成</div>
+            </div>
+            <div class="text-center p-2 bg-red-50 rounded border border-red-200">
+              <div class="text-lg font-bold text-gray-800" x-text="progress.failed"></div>
+              <div class="text-gray-600 text-xs">失败</div>
+            </div>
+            <div class="text-center p-2 bg-green-50 rounded border border-green-200">
+              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.totalSize)"></div>
+              <div class="text-gray-600 text-xs">总大小</div>
+            </div>
+            <div class="text-center p-2 bg-purple-50 rounded border border-purple-200">
+              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.uploadedSize)"></div>
+              <div class="text-gray-600 text-xs">已上传</div>
+            </div>
           </div>
         </div>
 
@@ -531,7 +420,6 @@
     function fileUploadApp() {
       return {
         // 基础状态
-        dragOver: false,
         isUploading: false,
         isPaused: false,
         cancelFlag: false,
@@ -544,8 +432,7 @@
           retryCount: 3
         },
         
-        // 文件和任务
-        files: [],
+        // 服务器任务
         serverTasks: [],
         unfinishedTasks: [], // 添加未完成任务列表
         recoveryPaths: {}, // 添加路径记忆存储
@@ -598,8 +485,8 @@
           // 加载记忆的文件路径
           this.loadRecoveryPaths();
           
-          // 检查并恢复未完成的任务
-          this.recoverUnfinishedTasks();
+          // 检查未完成的任务（不自动弹窗）
+          this.checkUnfinishedTasks();
           
           // 定时任务
           setInterval(() => this.updateSystemStatus(), 5000);
@@ -647,176 +534,35 @@
           }
         },
         
-        // 显示恢复任务界面
-        showRecoveryManager() {
-          if (this.unfinishedTasks.length === 0) {
-            this.showNotification('没有未完成的任务需要恢复', 'info');
-            return;
-          }
-          
-          // 构建恢复任务界面
-          let taskListHtml = '';
-          
-          // 分组任务
-          const folderTasks = this.unfinishedTasks.filter(t => t.task_type === 'folder');
-          const fileTasks = this.unfinishedTasks.filter(t => t.task_type !== 'folder');
-          
-          // 文件夹任务
-          if (folderTasks.length > 0) {
-            taskListHtml += '<div class="mb-4"><h3 class="text-lg font-medium mb-2">文件夹任务</h3>';
-            folderTasks.forEach(task => {
-              const completionRate = task.completion_rate || 0;
-              const recoveryInfo = this.recoveryPaths[task.task_id];
-              const recoveryHint = recoveryInfo ? 
-                `<div class="text-xs text-gray-500 mt-1">上次路径: ${recoveryInfo.path}</div>` : '';
-              
-              taskListHtml += `
-                <div class="bg-gray-50 p-3 rounded mb-2 border-l-4 border-purple-400">
-                  <div class="flex justify-between">
-                    <div>
-                      <div class="font-medium">${task.folder_name}</div>
-                      <div class="text-xs text-gray-600">
-                        ${task.total_files || 0} 个文件 | 
-                        已完成: ${task.completed_files || 0} | 
-                        ${this.formatFileSize(task.file_size)}
-                      </div>
-                      ${recoveryHint}
-                    </div>
-                    <div>
-                      <span class="px-2 py-1 text-xs rounded ${this.getStatusClass(task.status)}">
-                        ${this.getStatusText(task.status)}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="mt-2">
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                      <div class="bg-purple-500 h-2 rounded-full" style="width: ${completionRate}%"></div>
-                    </div>
-                  </div>
-                  <div class="mt-2 flex space-x-2">
-                    <button 
-                      onclick="window.app.selectRecoveryFolder('${task.task_id}')" 
-                      class="px-2 py-1 bg-blue-500 text-white rounded text-xs">
-                      选择文件夹
-                    </button>
-                    <button 
-                      onclick="window.app.deleteTask('${task.task_id}')" 
-                      class="px-2 py-1 bg-red-500 text-white rounded text-xs">
-                      删除任务
-                    </button>
-                  </div>
-                </div>
-              `;
-            });
-            taskListHtml += '</div>';
-          }
-          
-          // 文件任务
-          if (fileTasks.length > 0) {
-            taskListHtml += '<div><h3 class="text-lg font-medium mb-2">单文件任务</h3>';
-            fileTasks.forEach(task => {
-              const completionRate = task.completion_rate || 0;
-              const recoveryInfo = this.recoveryPaths[task.task_id || task.file_id];
-              const recoveryHint = recoveryInfo ? 
-                `<div class="text-xs text-gray-500 mt-1">上次路径: ${recoveryInfo.path}</div>` : '';
-              
-              taskListHtml += `
-                <div class="bg-gray-50 p-3 rounded mb-2 border-l-4 border-blue-400">
-                  <div class="flex justify-between">
-                    <div>
-                      <div class="font-medium">${task.filename}</div>
-                      <div class="text-xs text-gray-600">
-                        ${this.formatFileSize(task.file_size)} | 
-                        ${task.relative_path || ''}
-                      </div>
-                      ${recoveryHint}
-                    </div>
-                    <div>
-                      <span class="px-2 py-1 text-xs rounded ${this.getStatusClass(task.status)}">
-                        ${this.getStatusText(task.status)}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="mt-2">
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                      <div class="bg-blue-500 h-2 rounded-full" style="width: ${completionRate}%"></div>
-                    </div>
-                  </div>
-                  <div class="mt-2 flex space-x-2">
-                    <button 
-                      onclick="window.app.selectRecoveryFile('${task.task_id || task.file_id}')" 
-                      class="px-2 py-1 bg-blue-500 text-white rounded text-xs">
-                      选择文件
-                    </button>
-                    <button 
-                      onclick="window.app.deleteTask('${task.task_id || task.file_id}')" 
-                      class="px-2 py-1 bg-red-500 text-white rounded text-xs">
-                      删除任务
-                    </button>
-                  </div>
-                </div>
-              `;
-            });
-            taskListHtml += '</div>';
-          }
-          
-          // 显示恢复任务界面
-          this.modalTitle = '📋 恢复未完成的上传任务';
-          this.modalContent = `
-            <div class="space-y-4">
-              <p class="text-gray-700">
-                发现 ${this.unfinishedTasks.length} 个未完成的上传任务。要继续上传，请选择相同的文件或文件夹。
-              </p>
-              <div class="bg-blue-50 p-3 rounded border border-blue-200 text-sm">
-                <p class="font-medium text-blue-800">💡 提示</p>
-                <p class="text-blue-700">系统会自动匹配文件名和大小，从断点处继续上传。</p>
-              </div>
-              <div class="space-y-2">
-                ${taskListHtml}
-              </div>
-              <div class="flex justify-end space-x-2 mt-4">
-                <button onclick="window.app.cleanupTasks()" class="px-3 py-1 bg-yellow-500 text-white rounded">
-                  清理所有任务
-                </button>
-                <button onclick="window.app.closeModal()" class="px-3 py-1 bg-gray-500 text-white rounded">
-                  关闭
-                </button>
-              </div>
-            </div>
-          `;
-          
-          // 暴露app到window，以便按钮可以调用
-          window.app = this;
-          
-          this.showModal = true;
-        },
+
         
-        // 文件处理
+        // 统一文件选择处理
         selectFiles() {
+          this.showNotification('💡 提示：请选择要上传的文件', 'info');
           this.$refs.fileInput.click();
         },
         
         selectFolder() {
-          this.showNotification('💡 提示：在文件选择对话框中，请点击进入要上传的文件夹，然后点击对话框右下角的"选择文件夹"或"Upload"按钮', 'info');
+          this.showNotification('💡 提示：请选择要上传的文件夹。系统会自动包含文件夹中的所有文件。', 'info');
           this.$refs.folderInput.click();
         },
         
-        selectRecoveryFolder(taskId) {
-          // 设置当前恢复任务ID
+        selectRecoveryTask(taskId, taskType) {
+          // 设置当前恢复任务ID和类型
           window.currentRecoveryTask = taskId;
-          // 显示提示
-          this.showNotification('💡 提示：在文件选择对话框中，请点击进入要上传的文件夹，然后点击对话框右下角的"选择文件夹"或"Upload"按钮', 'info');
-          // 触发文件夹选择
-          this.$refs.folderInput.click();
+          window.currentRecoveryTaskType = taskType;
+          
+          // 根据任务类型显示不同的提示
+          if (taskType === 'folder') {
+            this.showNotification('💡 提示：请选择要恢复的文件夹。系统会自动包含文件夹中的所有文件。', 'info');
+            this.$refs.folderInput.click();
+          } else {
+            this.showNotification('💡 提示：请选择要恢复的文件', 'info');
+            this.$refs.fileInput.click();
+          }
         },
         
-        selectRecoveryFile(taskId) {
-          // 设置当前恢复任务ID
-          window.currentRecoveryTask = taskId;
-          // 触发文件选择
-          this.$refs.fileInput.click();
-        },
-        
+        // 文件选择处理函数
         handleFileSelect(event) {
           const files = Array.from(event.target.files);
           if (files.length === 0) return;
@@ -825,8 +571,125 @@
           if (window.currentRecoveryTask) {
             this.handleRecoveryFileSelect(files, window.currentRecoveryTask);
             window.currentRecoveryTask = null; // 清除当前恢复任务
+            event.target.value = '';
             return;
           }
+          
+          // 处理独立文件
+          this.processIndividualFiles(files);
+          
+          // 清空输入框以允许重复选择相同文件
+          event.target.value = '';
+          
+          // 刷新服务器任务并自动开始上传
+          this.refreshServerTasks().then(() => {
+            this.autoStartUploadIfNeeded();
+          });
+        },
+        
+        // 文件夹选择处理函数
+        handleFolderSelect(event) {
+          const files = Array.from(event.target.files);
+          if (files.length === 0) return;
+          
+          // 检查是否是恢复特定任务
+          if (window.currentRecoveryTask) {
+            this.handleRecoveryFileSelect(files, window.currentRecoveryTask);
+            window.currentRecoveryTask = null; // 清除当前恢复任务
+            event.target.value = '';
+            return;
+          }
+          
+          // 分析选择的文件，判断是文件夹还是独立文件
+          const fileGroups = this.analyzeFileSelection(files);
+          
+          this.log('📁 文件夹选择分析结果:', 'info');
+          this.log('- 文件夹数量: ' + fileGroups.folders.length, 'info');
+          this.log('- 独立文件数量: ' + fileGroups.individualFiles.length, 'info');
+          
+          // 处理文件夹
+          for (const folderGroup of fileGroups.folders) {
+            this.processFolderSelection(folderGroup);
+          }
+          
+          // 处理独立文件
+          if (fileGroups.individualFiles.length > 0) {
+            this.processIndividualFiles(fileGroups.individualFiles);
+          }
+          
+          // 清空输入框以允许重复选择相同文件
+          event.target.value = '';
+          
+          // 刷新服务器任务并自动开始上传
+          this.refreshServerTasks().then(() => {
+            this.autoStartUploadIfNeeded();
+          });
+        },
+        
+        // 分析文件选择，将文件分组为文件夹和独立文件
+        analyzeFileSelection(files) {
+          const folders = new Map(); // 文件夹组
+          const individualFiles = []; // 独立文件
+          
+          for (const file of files) {
+            if (file.webkitRelativePath) {
+              // 这是文件夹中的文件
+              const folderName = file.webkitRelativePath.split('/')[0];
+              if (!folders.has(folderName)) {
+                folders.set(folderName, []);
+              }
+              folders.get(folderName).push(file);
+            } else {
+              // 这是独立选择的文件
+              individualFiles.push(file);
+            }
+          }
+          
+          return {
+            folders: Array.from(folders.values()),
+            individualFiles: individualFiles
+          };
+        },
+        
+        // 处理文件夹选择
+        processFolderSelection(folderFiles) {
+          if (folderFiles.length === 0) return;
+          
+          const folderName = folderFiles[0].webkitRelativePath.split('/')[0];
+          const totalSize = folderFiles.reduce((sum, f) => sum + f.size, 0);
+          
+          this.log('📁 处理文件夹: ' + folderName + ' (' + folderFiles.length + ' 个文件)', 'info');
+          
+          // 检查是否有匹配的文件夹任务
+          const matchedTask = this.unfinishedTasks.find(task => 
+            task.task_type === 'folder' && 
+            task.folder_name === folderName && 
+            Math.abs(task.file_size - totalSize) / task.file_size < 0.1 // 允许10%的大小误差
+          );
+          
+          if (matchedTask) {
+            // 询问用户是否要恢复
+            const shouldRecover = confirm(
+              '找到匹配的未完成文件夹任务 "' + folderName + '"，是否要恢复上传？\n' +
+              '已完成: ' + (matchedTask.completion_rate || 0) + '%'
+            );
+            
+            if (shouldRecover) {
+              // 恢复文件夹任务
+              this.createRecoveryFolderTask(matchedTask, folderFiles);
+              return;
+            }
+          }
+          
+          // 创建新的文件夹任务
+          this.createFolderTask(folderName, folderFiles);
+        },
+        
+        // 处理独立文件选择
+        processIndividualFiles(files) {
+          if (files.length === 0) return;
+          
+          this.log('📄 处理独立文件: ' + files.length + ' 个文件', 'info');
           
           // 检查是否有匹配的未完成任务
           const matchedFiles = this.matchFilesWithTasks(files);
@@ -850,10 +713,8 @@
             }
           }
           
-          // 多文件选择 - 每个文件创建一个独立任务
+          // 添加所有文件到队列
           this.addIndividualFilesToQueue(files);
-          // 清空输入框以允许重复选择相同文件
-          event.target.value = '';
         },
         
         // 处理恢复特定任务的文件选择
@@ -865,7 +726,10 @@
             return;
           }
           
-          if (task.task_type === 'folder') {
+          // 使用全局任务类型信息，如果没有则从任务中获取
+          const taskType = window.currentRecoveryTaskType || task.task_type;
+          
+          if (taskType === 'folder') {
             // 文件夹任务恢复
             const folderName = files[0].webkitRelativePath.split('/')[0];
             this.log('恢复文件夹任务: ' + task.folder_name + ' -> ' + folderName, 'info');
@@ -887,8 +751,9 @@
             this.createRecoveryFileTask(task, file);
           }
           
-          // 关闭模态框
-          this.closeModal();
+          // 清除全局变量
+          window.currentRecoveryTask = null;
+          window.currentRecoveryTaskType = null;
           
           // 自动开始上传
           this.autoStartUploadIfNeeded();
@@ -966,12 +831,8 @@
             isRecovered: false // 不再标记为恢复的任务，因为有了文件对象
           };
           
-          this.files.push(fileItem);
           this.log('成功恢复文件任务: ' + file.name + ' (' + fileItem.progress + '%) - 状态: ' + fileItem.status, 'success');
           this.showNotification('已恢复文件任务: ' + file.name, 'success');
-          
-          // 调试：显示当前文件列表状态
-          this.log('当前文件列表状态: ' + this.files.map(f => f.name + '(' + f.status + ')').join(', '), 'info');
           
           // 保存路径记忆
           this.saveRecoveryPath(task.task_id || task.file_id, file.name, file.size);
@@ -1049,12 +910,8 @@
               isRecovered: false // 不再标记为恢复的任务，因为有了文件对象
             };
             
-            this.files.push(folderItem);
             this.log('成功恢复文件夹任务: ' + taskDetail.folder_name + ' (' + folderItem.progress + '%) - 状态: ' + folderItem.status, 'success');
             this.showNotification('已恢复文件夹任务: ' + taskDetail.folder_name, 'success');
-            
-            // 调试：显示当前文件列表状态
-            this.log('当前文件列表状态: ' + this.files.map(f => f.name + '(' + f.status + ')').join(', '), 'info');
             
             // 保存路径记忆
             this.saveRecoveryPath(task.task_id, taskDetail.folder_name, taskDetail.file_size);
@@ -1068,84 +925,9 @@
           }
         },
         
-        handleFolderSelect(event) {
-          const files = Array.from(event.target.files);
-          if (files.length === 0) {
-            this.showNotification('⚠️ 未选择任何文件，请重试', 'warning');
-            event.target.value = '';
-            return;
-          }
-          
-          // 检查是否是恢复特定任务
-          if (window.currentRecoveryTask) {
-            this.handleRecoveryFileSelect(files, window.currentRecoveryTask);
-            window.currentRecoveryTask = null; // 清除当前恢复任务
-            event.target.value = '';
-            return;
-          }
-          
-          // 分析文件夹结构
-          const folderName = files[0].webkitRelativePath.split('/')[0];
-          const fileExtensions = [...new Set(files.map(f => f.name.split('.').pop().toLowerCase()))];
-          const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-          
-          // 检查是否有匹配的文件夹任务
-          const matchedTask = this.unfinishedTasks.find(task => 
-            task.task_type === 'folder' && 
-            task.folder_name === folderName && 
-            Math.abs(task.file_size - totalSize) / task.file_size < 0.1 // 允许10%的大小误差
-          );
-          
-          if (matchedTask) {
-            // 询问用户是否要恢复
-            const shouldRecover = confirm(
-              '找到匹配的未完成文件夹任务 "' + folderName + '"，是否要恢复上传？\n' +
-              '已完成: ' + (matchedTask.completion_rate || 0) + '%'
-            );
-            
-            if (shouldRecover) {
-              // 恢复文件夹任务
-              this.createRecoveryFolderTask(matchedTask, files);
-              event.target.value = '';
-              
-              // 自动开始上传
-              this.autoStartUploadIfNeeded();
-              return;
-            }
-          }
-          
-          this.log('✅ 成功选择文件夹 "' + folderName + '"，包含 ' + files.length + ' 个文件 (' + this.formatFileSize(totalSize) + ')', 'success');
-          this.showNotification('📁 已选择文件夹 "' + folderName + '"，包含 ' + files.length + ' 个文件', 'success');
-          
-          if (fileExtensions.length > 1) {
-            this.log('📄 文件类型包括: ' + fileExtensions.slice(0, 5).join(', ') + (fileExtensions.length > 5 ? ' 等' : ''), 'info');
-          }
-          
-          // 文件夹选择 - 创建一个文件夹任务
-          this.createFolderTask(folderName, files);
-          
-          // 清空输入框以允许重复选择相同文件夹
-          event.target.value = '';
-        },
+
         
-        handleDrop(event) {
-          this.dragOver = false;
-          const files = Array.from(event.dataTransfer.files);
-          
-          // 检查是否包含文件夹结构
-          const hasRelativePath = files.some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
-          
-          if (hasRelativePath) {
-            // 文件夹拖拽
-            const folderName = files[0].webkitRelativePath.split('/')[0];
-            this.log('📁 检测到文件夹拖拽: ' + folderName, 'info');
-            this.createFolderTask(folderName, files);
-          } else {
-            // 多文件拖拽
-            this.log('📄 检测到多文件拖拽: ' + files.length + ' 个文件', 'info');
-            this.addIndividualFilesToQueue(files);
-          }
-        },
+
         
         // 创建文件夹任务
         async createFolderTask(folderName, files) {
@@ -1179,25 +961,11 @@
             
             const result = await response.json();
             
-            // 添加文件夹任务到前端队列
-            this.files.push({
-              id: result.folder_task_id,
-              taskType: 'folder',
-              folderName: folderName,
-              name: folderName,
-              files: files, // 保存原始文件对象用于上传
-              subTasks: result.sub_tasks,
-              totalFiles: result.total_files,
-              size: result.total_size,
-              status: 'pending',
-              progress: 0,
-              uploadedBytes: 0,
-              completedFiles: 0
-            });
-            
-            this.updateProgress();
-                          this.log('📁 文件夹任务创建成功: ' + folderName + ' (' + result.total_files + ' 个文件)', 'success');
+            this.log('📁 文件夹任务创建成功: ' + folderName + ' (' + result.total_files + ' 个文件)', 'success');
             this.showNotification('文件夹任务创建成功: ' + folderName, 'success');
+            
+            // 刷新服务器任务列表
+            await this.refreshServerTasks();
             
           } catch (error) {
                           this.log('❌ 创建文件夹任务失败: ' + error.message, 'error');
@@ -1206,119 +974,101 @@
         },
         
         // 添加独立文件到队列（多文件上传，每个文件一个任务）
-        addIndividualFilesToQueue(files) {
-          for (const file of files) {
-            this.files.push({
-              id: this.generateFileId(file),
-              taskType: 'file',
-              file: file,
-              name: file.webkitRelativePath || file.name,
-              size: file.size,
-              status: 'pending',
-              progress: 0,
-              uploadedBytes: 0
-            });
-          }
-          
-          this.updateProgress();
+        async addIndividualFilesToQueue(files) {
+          // 这里应该调用后端API创建文件任务
+          // 暂时保留前端逻辑，但会在refreshServerTasks后同步
           this.log('添加了 ' + files.length + ' 个独立文件任务到上传队列', 'info');
           this.showNotification('已添加 ' + files.length + ' 个文件任务', 'success');
-        },
-
-        // 旧方法保持兼容
-        addFilesToQueue(files) {
-          // 默认作为独立文件处理
-          this.addIndividualFilesToQueue(files);
+          
+          // 刷新服务器任务列表
+          await this.refreshServerTasks();
         },
         
-        generateFileId(file) {
-          const relativePath = file.webkitRelativePath || file.name;
-          return relativePath + '-' + file.size + '-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+        // 自动开始上传（如果需要）
+        autoStartUploadIfNeeded() {
+          // 检查是否有待上传的任务
+          const pendingTasks = this.serverTasks.filter(t => t.status === 'pending' || t.status === 'error' || t.status === 'uploading');
+          if (pendingTasks.length > 0 && !this.isUploading && !this.isPaused) {
+            this.log('检测到待上传任务，自动开始上传', 'info');
+            this.startUpload();
+          }
         },
         
-        // 上传控制
+        // 开始上传
         async startUpload() {
-          if (this.files.length === 0) {
-            this.showNotification('请先选择要上传的文件', 'warning');
+          if (this.isUploading) {
+            this.showNotification('上传已在进行中', 'warning');
             return;
           }
           
           this.isUploading = true;
-          this.isPaused = false;
           this.cancelFlag = false;
+          this.isPaused = false;
           this.startTime = Date.now();
           this.lastUploadedBytes = 0;
           this.lastSpeedUpdate = Date.now();
           
-          this.log('开始上传，共 ' + this.files.length + ' 个任务', 'info');
+          this.log('🚀 开始上传任务', 'info');
+          this.showNotification('开始上传任务', 'success');
           
           try {
             await this.concurrentUpload();
-            this.log('上传完成: ' + this.progress.completed + '/' + this.files.length + ' 个任务成功', 'success');
-            this.showNotification('所有任务上传完成！', 'success');
+            this.log('✅ 所有任务上传完成', 'success');
+            this.showNotification('所有任务上传完成', 'success');
           } catch (error) {
-            this.log('上传出错: ' + error.message, 'error');
-            this.showNotification('上传过程中出现错误', 'error');
+            this.log('❌ 上传过程中出现错误: ' + error.message, 'error');
+            this.showNotification('上传过程中出现错误: ' + error.message, 'error');
           } finally {
             this.isUploading = false;
-            this.refreshServerTasks();
+            this.updateProgress();
           }
         },
+
+
         
-        pauseUpload() {
-          this.isPaused = true;
-          this.log('上传已暂停', 'warning');
-          this.showNotification('上传已暂停', 'info');
-        },
+
         
-        cancelUpload() {
-          if (confirm('确定要取消所有上传任务吗？')) {
-            this.cancelFlag = true;
-            this.isPaused = false;
-            this.isUploading = false;
-            this.log('用户取消上传', 'warning');
-            this.showNotification('上传已取消', 'warning');
-          }
-        },
+
         
         // 并发上传
         async concurrentUpload() {
-          const pendingItems = this.files.filter(f => f.status === 'pending' || f.status === 'error');
-          this.log('并发上传开始，待处理任务: ' + pendingItems.length + ' 个', 'info');
-          this.log('待处理任务列表: ' + pendingItems.map(item => item.name + '(' + item.status + ')').join(', '), 'info');
+          const pendingTasks = this.serverTasks.filter(t => t.status === 'pending' || t.status === 'error' || t.status === 'uploading');
+          this.log('并发上传开始，待处理任务: ' + pendingTasks.length + ' 个', 'info');
+          this.log('待处理任务列表: ' + pendingTasks.map(task => (task.folder_name || task.filename) + '(' + task.status + ')').join(', '), 'info');
           
           let index = 0;
           const workers = [];
           
           // 定义上传工作函数
           const uploadWorker = async () => {
-            while (index < pendingItems.length && !this.cancelFlag && !this.isPaused) {
-              const itemIndex = index++;
-              const item = pendingItems[itemIndex];
+            while (index < pendingTasks.length && !this.cancelFlag && !this.isPaused) {
+              const taskIndex = index++;
+              const task = pendingTasks[taskIndex];
               
-              if (!item || (item.status !== 'pending' && item.status !== 'error')) {
-                this.log('跳过任务: ' + (item ? item.name : 'null') + ' - 状态: ' + (item ? item.status : 'null'), 'info');
+              if (!task || (task.status !== 'pending' && task.status !== 'error' && task.status !== 'uploading')) {
+                this.log('跳过任务: ' + (task ? (task.folder_name || task.filename) : 'null') + ' - 状态: ' + (task ? task.status : 'null'), 'info');
                 continue;
               }
               
-              item.status = 'uploading';
-              this.log('开始上传任务: ' + item.name + ' (类型: ' + item.taskType + ')', 'info');
+              // 更新任务状态为上传中
+              task.status = 'uploading';
+              this.log('开始上传任务: ' + (task.folder_name || task.filename) + ' (类型: ' + task.task_type + ')', 'info');
               this.updateProgress();
               
               try {
-                if (item.taskType === 'folder') {
-                  await this.uploadFolderTask(item);
+                if (task.task_type === 'folder') {
+                  await this.uploadFolderTask(task);
                 } else {
-                  await this.uploadSingleFile(item);
+                  await this.uploadSingleFile(task);
                 }
-                item.status = 'completed';
-                item.progress = 100;
+                task.status = 'completed';
+                task.completion_rate = 100;
                 this.progress.completed++;
-                this.log('✅ 完成: ' + item.name, 'success');
+                this.log('✅ 完成: ' + (task.folder_name || task.filename), 'success');
               } catch (error) {
-                item.status = 'error';
+                task.status = 'error';
                 this.progress.failed++;
-                this.log('❌ 失败: ' + item.name + ' - ' + error.message, 'error');
+                this.log('❌ 失败: ' + (task.folder_name || task.filename) + ' - ' + error.message, 'error');
               }
               
               this.updateProgress();
@@ -1572,28 +1322,7 @@
           return result;
         },
         
-        // 检查文件是否已经上传完成
-        async checkFileUploadStatus(fileId) {
-          try {
-            const response = await fetch('/go-uploader/tasks/' + fileId);
-            if (!response.ok) {
-              return { completed: false, progress: 0 };
-            }
-            
-            const taskDetail = await response.json();
-            const isCompleted = taskDetail.status === 'completed';
-            const progress = taskDetail.completion_rate || 0;
-            
-            return {
-              completed: isCompleted,
-              progress: progress,
-              task: taskDetail
-            };
-          } catch (error) {
-            console.error('检查文件上传状态失败:', error);
-            return { completed: false, progress: 0 };
-          }
-        },
+
         
         // MD5计算 - 修复版本
         async calculateMD5(file) {
@@ -1645,75 +1374,14 @@
             this.serverTasks = data.tasks || [];
             this.updateTaskStats();
             this.log('刷新任务列表: 共 ' + this.serverTasks.length + ' 个任务', 'info');
-            
-            // 同步前端文件列表状态
-            this.syncFileStatusWithServer();
           } catch (error) {
                           this.log('获取服务器任务失败: ' + error.message, 'error');
           }
         },
         
-        // 同步前端文件状态与服务器状态
-        syncFileStatusWithServer() {
-          for (const fileItem of this.files) {
-            const serverTask = this.serverTasks.find(task => 
-              (task.task_id || task.file_id) === fileItem.id
-            );
-            
-            if (serverTask) {
-              // 同步状态
-              if (serverTask.status === 'completed' && fileItem.status !== 'completed') {
-                fileItem.status = 'completed';
-                fileItem.progress = 100;
-                this.log('同步状态: ' + fileItem.name + ' -> 完成', 'info');
-              } else if (serverTask.status === 'failed' && fileItem.status !== 'error') {
-                fileItem.status = 'error';
-                this.log('同步状态: ' + fileItem.name + ' -> 失败', 'info');
-              } else if (serverTask.status === 'paused' && fileItem.status !== 'paused') {
-                fileItem.status = 'paused';
-                this.log('同步状态: ' + fileItem.name + ' -> 暂停', 'info');
-              }
-              
-              // 同步进度
-              if (serverTask.completion_rate !== undefined) {
-                fileItem.progress = serverTask.completion_rate;
-              }
-            }
-          }
-          
-          // 更新进度统计
-          this.updateProgress();
-        },
+
         
-        async pauseTask(fileId) {
-          try {
-            const response = await fetch('/go-uploader/tasks/' + fileId + '/pause', { method: 'POST' });
-            if (response.ok) {
-              this.showNotification('任务已暂停', 'success');
-              this.refreshServerTasks();
-            } else {
-              const error = await response.json();
-              this.showNotification(error.error || '暂停任务失败', 'error');
-            }
-          } catch (error) {
-            this.showNotification('暂停任务失败', 'error');
-          }
-        },
-        
-        async resumeTask(fileId) {
-          try {
-            const response = await fetch('/go-uploader/tasks/' + fileId + '/resume', { method: 'POST' });
-            if (response.ok) {
-              this.showNotification('任务已恢复', 'success');
-              this.refreshServerTasks();
-            } else {
-              const error = await response.json();
-              this.showNotification(error.error || '恢复任务失败', 'error');
-            }
-          } catch (error) {
-            this.showNotification('恢复任务失败', 'error');
-          }
-        },
+
         
         async deleteTask(fileId) {
           if (!confirm('确定要删除这个任务吗？')) return;
@@ -1805,8 +1473,8 @@
           }
         },
         
-        // 任务恢复功能
-        async recoverUnfinishedTasks() {
+        // 检查未完成任务（不自动弹窗）
+        async checkUnfinishedTasks() {
           try {
             this.log('正在检查未完成的任务...', 'info');
             
@@ -1823,10 +1491,7 @@
             this.unfinishedTasks = unfinishedTasks;
             
             if (unfinishedTasks.length > 0) {
-              this.log('发现 ' + unfinishedTasks.length + ' 个未完成的任务', 'info');
-              
-              // 显示任务恢复管理界面
-              this.showRecoveryManager();
+              this.log('发现 ' + unfinishedTasks.length + ' 个未完成的任务，可在任务列表中点击"选择文件恢复"按钮进行恢复', 'info');
             } else {
               this.log('没有发现未完成的任务', 'info');
             }
@@ -1835,108 +1500,13 @@
           }
         },
         
-        async restoreUnfinishedTasks(serverTasks) {
-          try {
-            this.log('正在恢复未完成的任务...', 'info');
-            
-            // 显示任务恢复管理界面
-            this.showRecoveryManager();
-            
-          } catch (error) {
-            this.log('恢复任务失败: ' + error.message, 'error');
-            this.showNotification('恢复任务失败', 'error');
-          }
-        },
+
         
-        // 上传文件夹任务
-        async uploadFolderTask(folderItem) {
-          // 如果有匹配的文件，使用改进的上传方法
-          if (folderItem.matchedFiles) {
-            await this.uploadRecoveredFolderTaskWithFiles(folderItem);
-          } else if (folderItem.isRecovered) {
-            // 旧的恢复逻辑，没有原始文件对象
-            await this.uploadRecoveredFolderTask(folderItem);
-          } else {
-            // 新创建的文件夹任务，使用原始文件对象
-            await this.uploadNewFolderTask(folderItem);
-          }
-        },
+
         
-        async uploadRecoveredFolderTask(folderItem) {
-          this.log('📁 恢复上传文件夹: ' + folderItem.folderName, 'info');
-          
-          try {
-            // 获取文件夹任务详情和子任务
-            const response = await fetch('/go-uploader/tasks/' + folderItem.id);
-            const taskDetail = await response.json();
-            
-            if (!taskDetail.sub_tasks || taskDetail.sub_tasks.length === 0) {
-              throw new Error('文件夹任务没有子任务信息');
-            }
-            
-            let completedFiles = taskDetail.completed_files || 0;
-            let failedFiles = 0;
-            
-            // 遍历子任务，只上传未完成的
-            for (const subTask of taskDetail.sub_tasks) {
-              if (this.cancelFlag || this.isPaused) {
-                throw new Error('上传被中断');
-              }
-              
-              if (subTask.status === 'completed') {
-                continue; // 跳过已完成的子任务
-              }
-              
-              try {
-                // 恢复的子任务，创建虚拟文件项进行续传
-                const fileItem = {
-                  id: subTask.file_id,
-                  file: null, // 恢复的任务没有原始文件对象
-                  name: subTask.relative_path,
-                  size: subTask.file_size,
-                  status: 'uploading',
-                  progress: subTask.completion_rate || 0,
-                  uploadedBytes: Math.round((subTask.completion_rate || 0) / 100 * subTask.file_size),
-                  isRecovered: true
-                };
-                
-                await this.uploadSingleFile(fileItem);
-                completedFiles++;
-                folderItem.completedFiles = completedFiles;
-                
-                // 更新文件夹任务进度
-                folderItem.progress = Math.round((completedFiles / folderItem.totalFiles) * 100);
-                
-                this.log('📄 文件夹中完成: ' + subTask.relative_path + ' (' + completedFiles + '/' + folderItem.totalFiles + ')', 'success');
-              } catch (error) {
-                failedFiles++;
-                this.log('📄 文件夹中失败: ' + subTask.relative_path + ' - ' + error.message, 'error');
-              }
-            }
-            
-                          if (failedFiles > 0) {
-                throw new Error('文件夹上传完成，但有 ' + failedFiles + ' 个文件失败');
-              }
-            
-            this.log('📁 恢复的文件夹上传完成: ' + folderItem.folderName, 'success');
-          } catch (error) {
-                          this.log('📁 恢复的文件夹上传失败: ' + folderItem.folderName + ' - ' + error.message, 'error');
-            throw error;
-          }
-        },
+
         
-        // 添加恢复任务按钮到侧边栏
-        addRecoveryButton() {
-          // 在侧边栏添加恢复任务按钮
-          const recoveryButton = `
-            <button @click="showRecoveryManager()" 
-                    class="w-full px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-sm transition-colors duration-200 mb-2">
-              🔄 恢复任务管理
-            </button>
-          `;
-          
-          return recoveryButton;
-        },
+
         
         // 详情和模态框
         async showTaskDetail(task) {
@@ -2109,15 +1679,16 @@
         },
         
         updateProgress() {
-          this.progress.total = this.files.length;
-          this.progress.completed = this.files.filter(f => f.status === 'completed').length;
-          this.progress.failed = this.files.filter(f => f.status === 'error').length;
+          // 使用服务器任务来计算进度
+          this.progress.total = this.serverTasks.length;
+          this.progress.completed = this.serverTasks.filter(t => t.status === 'completed').length;
+          this.progress.failed = this.serverTasks.filter(t => t.status === 'failed' || t.status === 'error').length;
           this.progress.percentage = this.progress.total > 0 ? (this.progress.completed / this.progress.total) * 100 : 0;
           
-          this.progress.totalSize = this.files.reduce((sum, f) => sum + f.size, 0);
-          this.progress.uploadedSize = this.files
-            .filter(f => f.status === 'completed')
-            .reduce((sum, f) => sum + f.size, 0);
+          this.progress.totalSize = this.serverTasks.reduce((sum, t) => sum + (t.file_size || 0), 0);
+          this.progress.uploadedSize = this.serverTasks
+            .filter(t => t.status === 'completed')
+            .reduce((sum, t) => sum + (t.file_size || 0), 0);
         },
         
         updateTaskStats() {
@@ -2227,7 +1798,7 @@
         },
         
         get totalFileSize() {
-          return this.files.reduce((sum, f) => sum + f.size, 0);
+          return this.serverTasks.reduce((sum, t) => sum + (t.file_size || 0), 0);
         },
         
         get remainingTime() {
@@ -2267,33 +1838,7 @@
           return new Promise(resolve => setTimeout(resolve, ms));
         },
         
-        // 自动开始上传（如果有待上传任务且当前未在上传）
-        autoStartUploadIfNeeded() {
-          const pendingFiles = this.files.filter(f => f.status === 'pending');
-          if (!this.isUploading && pendingFiles.length > 0) {
-            this.log('检测到恢复的任务，自动开始上传 (' + pendingFiles.length + ' 个待上传任务)', 'info');
-            this.isUploading = true;
-            this.isPaused = false;
-            this.cancelFlag = false;
-            this.startTime = Date.now();
-            this.lastUploadedBytes = 0;
-            this.lastSpeedUpdate = Date.now();
-            
-            // 立即开始上传
-            this.concurrentUpload().then(() => {
-              this.log('自动上传完成: ' + this.progress.completed + '/' + this.files.length + ' 个任务成功', 'success');
-              this.showNotification('所有任务上传完成！', 'success');
-            }).catch((error) => {
-              this.log('自动上传出错: ' + error.message, 'error');
-              this.showNotification('上传过程中出现错误', 'error');
-            }).finally(() => {
-              this.isUploading = false;
-              this.refreshServerTasks();
-            });
-          } else {
-            this.log('无需自动上传: isUploading=' + this.isUploading + ', pendingFiles=' + this.files.filter(f => f.status === 'pending').length, 'info');
-          }
-        }
+
       };
     }
   </script>
