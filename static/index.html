@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>大文件分片上传</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .upload-option { margin: 10px 0; }
+    .upload-option label { margin-right: 10px; }
+    .config-section { 
+      border: 1px solid #ddd; 
+      padding: 15px; 
+      margin: 15px 0; 
+      border-radius: 5px; 
+      background-color: #f9f9f9; 
+    }
+    .config-section h3 { margin-top: 0; }
+    .config-item { margin: 10px 0; }
+    .config-item label { display: inline-block; width: 120px; }
+    .config-item input, .config-item select { 
+      width: 200px; 
+      padding: 5px; 
+      border: 1px solid #ccc; 
+      border-radius: 3px; 
+    }
+    .progress-container { margin: 20px 0; }
+    .progress-bar { 
+      width: 100%; 
+      height: 20px; 
+      background-color: #f0f0f0; 
+      border-radius: 10px; 
+      overflow: hidden; 
+    }
+    .progress-fill { 
+      height: 100%; 
+      background-color: #4CAF50; 
+      transition: width 0.3s ease; 
+    }
+    .file-list { 
+      max-height: 200px; 
+      overflow-y: auto; 
+      border: 1px solid #ddd; 
+      padding: 10px; 
+      margin: 10px 0; 
+    }
+    .file-item { 
+      padding: 5px; 
+      border-bottom: 1px solid #eee; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .file-item:last-child { 
+      border-bottom: none; 
+    }
+    .file-status {
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status-pending { background-color: #ffeaa7; color: #2d3436; }
+    .status-uploading { background-color: #74b9ff; color: white; }
+    .status-completed { background-color: #00b894; color: white; }
+    .status-error { background-color: #e17055; color: white; }
+    .error { color: red; }
+    .success { color: green; }
+    .task-manager {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+      background-color: #f0f8ff;
+    }
+    .task-item {
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin: 5px 0;
+      border-radius: 3px;
+      background-color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .btn-resume { background-color: #4CAF50; color: white; }
+    .btn-delete { background-color: #f44336; color: white; }
+    .concurrent-status {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #e8f5e8;
+      border-radius: 5px;
+      border-left: 4px solid #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <h2>大文件/文件夹上传 - 高级版</h2>
+  
+  <div class="config-section">
+    <h3>⚙️ 上传配置</h3>
+    <div class="config-item">
+      <label>分片大小:</label>
+      <select id="chunkSizeSelect" onchange="updateChunkSize()">
+        <option value="5">5MB (网络较慢)</option>
+        <option value="10" selected>10MB (默认)</option>
+        <option value="20">20MB (网络良好)</option>
+        <option value="50">50MB (高速网络)</option>
+        <option value="100">100MB (千兆网络)</option>
+      </select>
+    </div>
+    <div class="config-item">
+      <label>并发数量:</label>
+      <select id="concurrentSelect">
+        <option value="1">1 (单线程)</option>
+        <option value="2">2 (推荐)</option>
+        <option value="3" selected>3 (默认)</option>
+        <option value="4">4 (高性能)</option>
+        <option value="5">5 (最大)</option>
+      </select>
+    </div>
+    <div class="config-item">
+      <label>任务名称:</label>
+      <input type="text" id="taskName" placeholder="输入任务名称 (可选)">
+    </div>
+  </div>
+  
+  <div class="upload-option">
+    <label>
+      <input type="radio" name="uploadType" value="file" checked onchange="toggleUploadType()">
+      单文件上传
+    </label>
+    <label>
+      <input type="radio" name="uploadType" value="folder" onchange="toggleUploadType()">
+      文件夹上传
+    </label>
+  </div>
+  
+  <input type="file" id="fileInput" style="display: block;">
+  <input type="file" id="folderInput" webkitdirectory style="display: none;">
+  
+  <div id="fileList" class="file-list" style="display: none;"></div>
+  
+  <div class="concurrent-status" id="concurrentStatus" style="display: none;">
+    <div>并发上传状态: <span id="concurrentInfo">准备中...</span></div>
+    <div>活跃任务: <span id="activeTasks">0</span> / 完成任务: <span id="completedTasks">0</span> / 失败任务: <span id="failedTasks">0</span></div>
+  </div>
+  
+  <div class="progress-container" style="display: none;" id="progressContainer">
+    <div>总进度: <span id="progressText">0%</span></div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+    </div>
+    <div>预计剩余时间: <span id="remainingTime">计算中...</span></div>
+  </div>
+  
+  <button onclick="startUpload()" id="uploadBtn">开始上传</button>
+  <button onclick="pauseUpload()" id="pauseBtn" style="display: none;">暂停上传</button>
+  <button onclick="cancelUpload()" id="cancelBtn" style="display: none;">取消上传</button>
+  
+  <div class="task-manager">
+    <h3>📋 任务管理</h3>
+    <button onclick="refreshTasks()">刷新任务列表</button>
+    <button onclick="clearCompletedTasks()">清理已完成任务</button>
+    <div id="taskList"></div>
+  </div>
+  
+  <pre id="log"></pre>
+
+  <script>
+    let CHUNK_SIZE = 10 * 1024 * 1024; // 默认10MB
+    let uploadQueue = [];
+    let isUploading = false;
+    let isPaused = false;
+    let cancelFlag = false;
+    let concurrentLimit = 3;
+    let activeTasks = 0;
+    let completedTasks = 0;
+    let failedTasks = 0;
+    let startTime = 0;
+    let currentTaskId = null;
+
+    function log(msg) {
+      const logElement = document.getElementById("log");
+      const timestamp = new Date().toLocaleTimeString();
+      logElement.textContent += `[${timestamp}] ${msg}\n`;
+      logElement.scrollTop = logElement.scrollHeight;
+    }
+
+    function updateChunkSize() {
+      const sizeInMB = parseInt(document.getElementById("chunkSizeSelect").value);
+      CHUNK_SIZE = sizeInMB * 1024 * 1024;
+      log(`🔧 分片大小调整为: ${sizeInMB}MB`);
+    }
+
+    function toggleUploadType() {
+      const uploadType = document.querySelector('input[name="uploadType"]:checked').value;
+      const fileInput = document.getElementById("fileInput");
+      const folderInput = document.getElementById("folderInput");
+      const fileList = document.getElementById("fileList");
+      
+      if (uploadType === "file") {
+        fileInput.style.display = "block";
+        folderInput.style.display = "none";
+        fileList.style.display = "none";
+      } else {
+        fileInput.style.display = "none";
+        folderInput.style.display = "block";
+        fileList.style.display = "block";
+      }
+      
+      uploadQueue = [];
+      updateFileList();
+      updateProgress(0, 0);
+    }
+
+    function updateFileList() {
+      const fileList = document.getElementById("fileList");
+      if (uploadQueue.length === 0) {
+        fileList.innerHTML = "<div>暂无文件</div>";
+        return;
+      }
+      
+      let html = `<div><strong>共 ${uploadQueue.length} 个文件，总大小: ${formatFileSize(uploadQueue.reduce((sum, item) => sum + item.file.size, 0))}</strong></div>`;
+      uploadQueue.forEach((item, index) => {
+        const statusClass = `status-${item.status}`;
+        const statusText = {
+          'pending': '等待',
+          'uploading': '上传中',
+          'completed': '完成',
+          'error': '失败'
+        }[item.status] || '未知';
+        
+        html += `<div class="file-item">
+          <span>${item.file.webkitRelativePath || item.file.name} (${formatFileSize(item.file.size)})</span>
+          <span class="file-status ${statusClass}">${statusText}</span>
+        </div>`;
+      });
+      fileList.innerHTML = html;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function updateProgress(current, total) {
+      const progressContainer = document.getElementById("progressContainer");
+      const progressText = document.getElementById("progressText");
+      const progressFill = document.getElementById("progressFill");
+      const remainingTimeSpan = document.getElementById("remainingTime");
+      
+      if (total === 0) {
+        progressContainer.style.display = "none";
+        return;
+      }
+      
+      progressContainer.style.display = "block";
+      const percentage = Math.round((current / total) * 100);
+      progressText.textContent = `${percentage}% (${current}/${total})`;
+      progressFill.style.width = `${percentage}%`;
+      
+      // 计算剩余时间
+      if (current > 0 && startTime > 0) {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const rate = current / elapsed;
+        const remaining = (total - current) / rate;
+        remainingTimeSpan.textContent = formatTime(remaining);
+      } else {
+        remainingTimeSpan.textContent = "计算中...";
+      }
+    }
+
+    function updateConcurrentStatus() {
+      const concurrentStatus = document.getElementById("concurrentStatus");
+      const concurrentInfo = document.getElementById("concurrentInfo");
+      const activeTasksSpan = document.getElementById("activeTasks");
+      const completedTasksSpan = document.getElementById("completedTasks");
+      const failedTasksSpan = document.getElementById("failedTasks");
+      
+      if (isUploading) {
+        concurrentStatus.style.display = "block";
+        concurrentInfo.textContent = `并发限制: ${concurrentLimit}`;
+        activeTasksSpan.textContent = activeTasks;
+        completedTasksSpan.textContent = completedTasks;
+        failedTasksSpan.textContent = failedTasks;
+      } else {
+        concurrentStatus.style.display = "none";
+      }
+    }
+
+    function formatTime(seconds) {
+      if (!seconds || seconds === Infinity) return "未知";
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 监听文件选择
+    document.getElementById("fileInput").addEventListener("change", function(e) {
+      uploadQueue = [];
+      if (e.target.files.length > 0) {
+        uploadQueue.push({
+          file: e.target.files[0],
+          status: 'pending'
+        });
+      }
+      updateFileList();
+    });
+
+    document.getElementById("folderInput").addEventListener("change", function(e) {
+      uploadQueue = [];
+      for (let file of e.target.files) {
+        uploadQueue.push({
+          file: file,
+          status: 'pending'
+        });
+      }
+      updateFileList();
+      log(`选择了 ${uploadQueue.length} 个文件，总大小: ${formatFileSize(uploadQueue.reduce((sum, item) => sum + item.file.size, 0))}`);
+      
+      // 检查是否有未完成的任务可以恢复
+      checkForResumableTask();
+    });
+
+    function generateTaskId(files) {
+      // 基于文件列表生成唯一的任务ID
+      const fileSignature = files.map(item => 
+        `${item.file.webkitRelativePath || item.file.name}-${item.file.size}`
+      ).sort().join('|');
+      return 'task_' + btoa(fileSignature).replace(/[+/=]/g, '').substring(0, 16);
+    }
+
+    function saveTaskProgress() {
+      if (!currentTaskId) return;
+      
+      const taskData = {
+        id: currentTaskId,
+        name: document.getElementById("taskName").value || `任务_${new Date().toLocaleString()}`,
+        files: uploadQueue.map(item => ({
+          name: item.file.name,
+          size: item.file.size,
+          relativePath: item.file.webkitRelativePath || "",
+          status: item.status
+        })),
+        config: {
+          chunkSize: CHUNK_SIZE,
+          concurrentLimit: concurrentLimit
+        },
+        progress: {
+          completed: completedTasks,
+          failed: failedTasks,
+          total: uploadQueue.length
+        },
+        timestamp: Date.now()
+      };
+      
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      savedTasks[currentTaskId] = taskData;
+      localStorage.setItem('uploadTasks', JSON.stringify(savedTasks));
+    }
+
+    function checkForResumableTask() {
+      if (uploadQueue.length === 0) return;
+      
+      const taskId = generateTaskId(uploadQueue);
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      
+      if (savedTasks[taskId] && savedTasks[taskId].progress.completed < savedTasks[taskId].progress.total) {
+        if (confirm(`检测到未完成的任务 "${savedTasks[taskId].name}"，是否继续上传？`)) {
+          loadTask(taskId);
+        }
+      }
+    }
+
+    function loadTask(taskId) {
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      const taskData = savedTasks[taskId];
+      
+      if (!taskData) return;
+      
+      currentTaskId = taskId;
+      document.getElementById("taskName").value = taskData.name;
+      
+      // 恢复配置
+      CHUNK_SIZE = taskData.config.chunkSize;
+      concurrentLimit = taskData.config.concurrentLimit;
+      
+      // 更新UI
+      const chunkSizeMB = CHUNK_SIZE / (1024 * 1024);
+      document.getElementById("chunkSizeSelect").value = chunkSizeMB;
+      document.getElementById("concurrentSelect").value = concurrentLimit;
+      
+      log(`📂 恢复任务: ${taskData.name}`);
+      log(`⚙️ 配置 - 分片: ${chunkSizeMB}MB, 并发: ${concurrentLimit}`);
+      
+      refreshTasks();
+    }
+
+    function pauseUpload() {
+      isPaused = true;
+      log("⏸️ 上传已暂停");
+      document.getElementById("pauseBtn").style.display = "none";
+      document.getElementById("uploadBtn").style.display = "inline-block";
+      document.getElementById("uploadBtn").textContent = "继续上传";
+      saveTaskProgress();
+    }
+
+    function cancelUpload() {
+      cancelFlag = true;
+      isPaused = false;
+      log("❌ 用户取消上传");
+      saveTaskProgress();
+    }
+
+    async function startUpload() {
+      if (uploadQueue.length === 0) {
+        return alert("请选择文件或文件夹");
+      }
+      
+      if (isUploading && !isPaused) {
+        return alert("正在上传中，请等待完成");
+      }
+      
+      // 获取配置
+      concurrentLimit = parseInt(document.getElementById("concurrentSelect").value);
+      
+      // 生成或恢复任务ID
+      if (!currentTaskId) {
+        currentTaskId = generateTaskId(uploadQueue);
+      }
+      
+      isUploading = true;
+      isPaused = false;
+      cancelFlag = false;
+      startTime = Date.now();
+      
+      // 重置计数器
+      activeTasks = 0;
+      if (document.getElementById("uploadBtn").textContent !== "继续上传") {
+        completedTasks = 0;
+        failedTasks = 0;
+      }
+      
+      document.getElementById("uploadBtn").style.display = "none";
+      document.getElementById("pauseBtn").style.display = "inline-block";
+      document.getElementById("cancelBtn").style.display = "inline-block";
+      
+      log(`🚀 开始${document.getElementById("uploadBtn").textContent === "继续上传" ? "继续" : ""}批量上传，共 ${uploadQueue.length} 个文件`);
+      log(`⚙️ 配置 - 分片大小: ${CHUNK_SIZE / (1024 * 1024)}MB, 并发数量: ${concurrentLimit}`);
+      
+      await concurrentUpload();
+      
+      updateProgress(uploadQueue.length, uploadQueue.length);
+      updateConcurrentStatus();
+      log(`📊 上传完成: ${completedTasks}/${uploadQueue.length} 个文件成功`);
+      
+      isUploading = false;
+      document.getElementById("uploadBtn").style.display = "inline-block";
+      document.getElementById("uploadBtn").textContent = "开始上传";
+      document.getElementById("pauseBtn").style.display = "none";
+      document.getElementById("cancelBtn").style.display = "none";
+      
+      saveTaskProgress();
+      refreshTasks();
+    }
+
+    async function concurrentUpload() {
+      const pendingFiles = uploadQueue.filter(item => item.status === 'pending');
+      let index = 0;
+      
+      const workers = [];
+      
+      // 创建并发工作线程
+      for (let i = 0; i < concurrentLimit; i++) {
+        workers.push(uploadWorker());
+      }
+      
+      async function uploadWorker() {
+        while (index < pendingFiles.length && !cancelFlag && !isPaused) {
+          const fileIndex = index++;
+          const item = pendingFiles[fileIndex];
+          
+          if (!item || item.status !== 'pending') continue;
+          
+          activeTasks++;
+          item.status = 'uploading';
+          updateFileList();
+          updateConcurrentStatus();
+          
+          try {
+            await uploadSingleFile(item.file);
+            item.status = 'completed';
+            completedTasks++;
+            log(`✅ 完成: ${item.file.webkitRelativePath || item.file.name}`);
+          } catch (error) {
+            item.status = 'error';
+            failedTasks++;
+            log(`❌ 失败: ${item.file.webkitRelativePath || item.file.name} - ${error}`);
+          }
+          
+          activeTasks--;
+          updateFileList();
+          updateProgress(completedTasks + failedTasks, uploadQueue.length);
+          updateConcurrentStatus();
+          
+          // 定期保存进度
+          if ((completedTasks + failedTasks) % 5 === 0) {
+            saveTaskProgress();
+          }
+        }
+      }
+      
+      // 等待所有工作线程完成
+      await Promise.all(workers);
+    }
+
+    async function uploadSingleFile(file) {
+      const fileId = `${file.webkitRelativePath || file.name}-${file.size}-${Date.now()}`;
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+      // 获取已上传分片索引
+      let uploadedChunks = [];
+      try {
+        const res = await fetch(`/go-uploader/upload_status?file_id=${encodeURIComponent(fileId)}`);
+        const data = await res.json();
+        uploadedChunks = data.uploaded_chunks || [];
+      } catch (err) {
+        // 忽略状态查询错误
+      }
+
+      // 上传分片
+      for (let i = 0; i < totalChunks; i++) {
+        if (cancelFlag || isPaused) throw new Error("上传被中断");
+        
+        if (uploadedChunks.includes(i)) {
+          continue;
+        }
+
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(file.size, start + CHUNK_SIZE);
+        const chunk = file.slice(start, end);
+
+        const form = new FormData();
+        form.append("file_id", fileId);
+        form.append("chunk_index", i);
+        form.append("chunk", chunk);
+        form.append("relative_path", file.webkitRelativePath || file.name);
+
+        const response = await fetch("/go-uploader/upload_chunk", { method: "POST", body: form });
+        if (!response.ok) {
+          throw new Error(`分片 ${i} 上传失败: ${response.status}`);
+        }
+      }
+
+      // 合并文件
+      const mergeForm = new FormData();
+      mergeForm.append("file_id", fileId);
+      mergeForm.append("total_chunks", totalChunks);
+      mergeForm.append("filename", file.name);
+      mergeForm.append("relative_path", file.webkitRelativePath || file.name);
+
+      const mergeRes = await fetch("/go-uploader/merge_chunks", { method: "POST", body: mergeForm });
+      if (!mergeRes.ok) {
+        throw new Error(`合并失败: ${mergeRes.status}`);
+      }
+      
+      const result = await mergeRes.json();
+      return result;
+    }
+
+    function refreshTasks() {
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      const taskList = document.getElementById("taskList");
+      
+      if (Object.keys(savedTasks).length === 0) {
+        taskList.innerHTML = "<div>暂无保存的任务</div>";
+        return;
+      }
+      
+      let html = "";
+      Object.values(savedTasks).forEach(task => {
+        const isCompleted = task.progress.completed === task.progress.total;
+        const statusText = isCompleted ? "已完成" : `进行中 (${task.progress.completed}/${task.progress.total})`;
+        const timeText = new Date(task.timestamp).toLocaleString();
+        
+        html += `<div class="task-item">
+          <div>
+            <strong>${task.name}</strong><br>
+            <small>${task.files.length} 个文件 - ${statusText} - ${timeText}</small>
+          </div>
+          <div class="task-actions">
+            ${!isCompleted ? `<button class="btn-resume" onclick="resumeTask('${task.id}')">继续</button>` : ''}
+            <button class="btn-delete" onclick="deleteTask('${task.id}')">删除</button>
+          </div>
+        </div>`;
+      });
+      
+      taskList.innerHTML = html;
+    }
+
+    function resumeTask(taskId) {
+      if (isUploading) {
+        alert("请先停止当前上传任务");
+        return;
+      }
+      
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      const task = savedTasks[taskId];
+      
+      if (!task) return;
+      
+      // 需要用户重新选择文件夹来恢复文件引用
+      alert("请重新选择相同的文件夹来恢复任务");
+      currentTaskId = taskId;
+      
+      // 切换到文件夹模式
+      document.querySelector('input[name="uploadType"][value="folder"]').checked = true;
+      toggleUploadType();
+    }
+
+    function deleteTask(taskId) {
+      if (confirm("确定要删除这个任务吗？")) {
+        const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+        delete savedTasks[taskId];
+        localStorage.setItem('uploadTasks', JSON.stringify(savedTasks));
+        refreshTasks();
+        log(`🗑️ 已删除任务: ${taskId}`);
+      }
+    }
+
+    function clearCompletedTasks() {
+      const savedTasks = JSON.parse(localStorage.getItem('uploadTasks') || '{}');
+      const filteredTasks = {};
+      
+      Object.entries(savedTasks).forEach(([id, task]) => {
+        if (task.progress.completed < task.progress.total) {
+          filteredTasks[id] = task;
+        }
+      });
+      
+      localStorage.setItem('uploadTasks', JSON.stringify(filteredTasks));
+      refreshTasks();
+      log("🧹 已清理所有已完成的任务");
+    }
+
+    // 页面加载时刷新任务列表
+    window.addEventListener('load', () => {
+      refreshTasks();
+      updateConcurrentStatus();
+    });
+
+    // 页面关闭前保存进度
+    window.addEventListener('beforeunload', () => {
+      if (isUploading) {
+        saveTaskProgress();
+      }
+    });
+  </script>
+</body>
+</html>
