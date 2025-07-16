@@ -59,6 +59,11 @@ func main() {
 		goUploader.POST("/tasks/:file_id/resume", handler.ResumeTask)
 		goUploader.POST("/tasks/cleanup", handler.CleanupTasks)
 		
+		// 文件夹任务API
+		goUploader.POST("/folder_tasks", handler.CreateFolderTask)
+		goUploader.GET("/folder_tasks/:folder_task_id/summary", handler.GetFolderTaskSummary)
+		goUploader.GET("/folder_tasks/:folder_task_id/sub_tasks", handler.GetSubTasks)
+		
 		// 监控和健康检查API
 		goUploader.GET("/health", handler.HealthCheck)
 		goUploader.GET("/system", handler.SystemInfo)
