@@ -1,13 +1,43 @@
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
+
+// SanitizeFileID 将包含路径的fileID转换为安全的文件名
+// 使用MD5哈希确保唯一性，避免文件名冲突
+func SanitizeFileID(fileID string) string {
+	// 使用MD5哈希生成唯一标识符
+	hasher := md5.New()
+	hasher.Write([]byte(fileID))
+	hash := hex.EncodeToString(hasher.Sum(nil))
+	
+	// 保留原始文件名的可读部分（但去除路径分隔符）
+	readablePart := strings.ReplaceAll(fileID, "/", "_")
+	readablePart = strings.ReplaceAll(readablePart, "\\", "_")
+	readablePart = strings.ReplaceAll(readablePart, "..", "_")
+	
+	// 限制可读部分长度，避免文件名过长
+	if len(readablePart) > 50 {
+		readablePart = readablePart[:50]
+	}
+	
+	// 组合可读部分和哈希值，确保唯一性
+	return fmt.Sprintf("%s_%s", readablePart, hash[:8])
+}
+
+// sanitizeFileID 内部使用的版本，保持向后兼容
+func sanitizeFileID(fileID string) string {
+	return SanitizeFileID(fileID)
+}
 
 // UploadTask 上传任务结构
 type UploadTask struct {
@@ -67,7 +97,15 @@ func (s *TaskStorage) SaveTask(task *UploadTask) error {
 	task.UpdatedAt = time.Now()
 	s.tasks[task.FileID] = task
 
-	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", task.FileID))
+	// 使用安全的文件名
+	safeFileID := sanitizeFileID(task.FileID)
+	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", safeFileID))
+	
+	// 确保目标目录存在（处理嵌套目录）
+	if err := EnsureDirectory(filepath.Dir(taskFile)); err != nil {
+		return fmt.Errorf("创建任务文件目录失败: %v", err)
+	}
+	
 	data, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return err
@@ -147,12 +185,19 @@ func (s *TaskStorage) CleanupExpiredTasks() error {
 
 	for fileID, task := range s.tasks {
 		if (task.Status == "failed" || task.Status == "paused") && task.UpdatedAt.Before(expiredTime) {
-			// 删除相关文件
-			taskDir := filepath.Join(Config.UploadDir, fileID)
+			// 删除相关文件 - 使用安全的文件ID作为目录名
+			safeFileID := sanitizeFileID(fileID)
+			taskDir := filepath.Join(Config.UploadDir, safeFileID)
 			os.RemoveAll(taskDir)
 
+			// 删除锁文件
+			lockPath := filepath.Join(Config.UploadDir, safeFileID+".lock")
+			os.Remove(lockPath)
+			mergeLockPath := filepath.Join(Config.UploadDir, safeFileID+".merge.lock")
+			os.Remove(mergeLockPath)
+
 			// 删除元数据文件
-			taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", fileID))
+			taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", safeFileID))
 			os.Remove(taskFile)
 
 			delete(s.tasks, fileID)
@@ -191,7 +236,15 @@ func (s *TaskStorage) loadTasks() error {
 
 // saveTaskFile 保存单个任务文件
 func (s *TaskStorage) saveTaskFile(task *UploadTask) error {
-	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", task.FileID))
+	// 使用安全的文件名
+	safeFileID := sanitizeFileID(task.FileID)
+	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", safeFileID))
+	
+	// 确保目标目录存在（处理嵌套目录）
+	if err := EnsureDirectory(filepath.Dir(taskFile)); err != nil {
+		return fmt.Errorf("创建任务文件目录失败: %v", err)
+	}
+	
 	data, err := json.MarshalIndent(task, "", "  ")
 	if err != nil {
 		return err
@@ -217,12 +270,19 @@ func (s *TaskStorage) DeleteTask(fileID string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// 删除相关文件
-	taskDir := filepath.Join(Config.UploadDir, fileID)
+	// 删除相关文件 - 使用安全的文件ID作为目录名
+	safeFileID := sanitizeFileID(fileID)
+	taskDir := filepath.Join(Config.UploadDir, safeFileID)
 	os.RemoveAll(taskDir)
 
+	// 删除锁文件
+	lockPath := filepath.Join(Config.UploadDir, safeFileID+".lock")
+	os.Remove(lockPath)
+	mergeLockPath := filepath.Join(Config.UploadDir, safeFileID+".merge.lock")
+	os.Remove(mergeLockPath)
+
 	// 删除元数据文件
-	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", fileID))
+	taskFile := filepath.Join(s.storageDir, fmt.Sprintf("%s.json", safeFileID))
 	os.Remove(taskFile)
 
 	delete(s.tasks, fileID)

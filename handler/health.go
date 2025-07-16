@@ -132,10 +132,7 @@ func getTaskStatistics() map[string]int {
 // getDiskUsage 获取磁盘使用情况
 func getDiskUsage(path string) (map[string]interface{}, error) {
 	// 获取文件系统信息
-	var stat os.FileInfo
-	var err error
-	
-	stat, err = os.Stat(path)
+	_, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}

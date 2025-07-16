@@ -37,7 +37,9 @@ func UploadStatus(c *gin.Context) {
 	}
 
 	// 回退到文件系统检查（兼容旧版本）
-	dir := filepath.Join(utils.Config.UploadDir, fileID)
+	// 使用安全的文件ID作为目录名，适应扁平化存储
+	safeFileID := utils.SanitizeFileID(fileID)
+	dir := filepath.Join(utils.Config.UploadDir, safeFileID)
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		c.JSON(200, gin.H{

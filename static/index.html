@@ -4,196 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>企业级文件上传系统</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Spark MD5 for file hashing -->
+  <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'bounce-slow': 'bounce 2s infinite',
+          }
+        }
+      }
+    }
+  </script>
+  
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Microsoft YaHei', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      color: #333;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    .header {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 15px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-    }
-    
-    .header h1 {
-      color: #667eea;
-      font-size: 2.5em;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-    
-    .system-status {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 15px;
-    }
-    
-    .status-item {
-      text-align: center;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(102, 126, 234, 0.1);
-    }
-    
-    .status-value {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #667eea;
-    }
-    
-    .main-content {
-      display: grid;
-      grid-template-columns: 1fr 400px;
-      gap: 20px;
-    }
-    
-    .upload-panel {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 15px;
-      padding: 25px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-    }
-    
-    .sidebar {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    
-    .card {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 15px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-    }
-    
-    .card h3 {
-      color: #667eea;
-      margin-bottom: 15px;
-      font-size: 1.2em;
-    }
-    
-    .config-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    
-    .form-group {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .form-group label {
-      margin-bottom: 5px;
-      font-weight: 500;
-      color: #555;
-    }
-    
-    .form-group select,
-    .form-group input {
-      padding: 8px 12px;
-      border: 2px solid #e1e8ed;
-      border-radius: 8px;
-      font-size: 14px;
-      transition: border-color 0.3s;
-    }
-    
-    .form-group select:focus,
-    .form-group input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    
-    .upload-area {
-      border: 3px dashed #667eea;
-      border-radius: 15px;
-      padding: 40px;
-      text-align: center;
-      margin: 20px 0;
-      transition: all 0.3s;
-      cursor: pointer;
-    }
-    
-    .upload-area:hover {
-      background: rgba(102, 126, 234, 0.05);
-      border-color: #764ba2;
-    }
-    
-    .upload-area.dragover {
-      background: rgba(102, 126, 234, 0.1);
-      border-color: #667eea;
-      transform: scale(1.02);
-    }
-    
-    .upload-icon {
-      font-size: 3em;
-      color: #667eea;
-      margin-bottom: 15px;
-    }
-    
-    .file-input {
-      display: none;
-    }
-    
-    .progress-section {
-      margin: 20px 0;
-    }
-    
-    .progress-bar {
-      width: 100%;
-      height: 25px;
-      background: #f0f0f0;
-      border-radius: 12px;
-      overflow: hidden;
-      margin: 10px 0;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      transition: width 0.3s ease;
-      border-radius: 12px;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .progress-fill::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-      );
-      animation: shimmer 2s infinite;
+    .upload-area-hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
     }
     
     @keyframes shimmer {
@@ -201,426 +51,132 @@
       100% { transform: translateX(100%); }
     }
     
-    .progress-text {
-      text-align: center;
-      margin: 10px 0;
-      font-weight: 500;
-    }
-    
-    .file-list {
-      max-height: 300px;
-      overflow-y: auto;
-      margin: 15px 0;
-      border-radius: 8px;
-      border: 1px solid #e1e8ed;
-    }
-    
-    .file-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 15px;
-      border-bottom: 1px solid #f0f0f0;
-      transition: background-color 0.3s;
-    }
-    
-    .file-item:hover {
-      background: rgba(102, 126, 234, 0.05);
-    }
-    
-    .file-item:last-child {
-      border-bottom: none;
-    }
-    
-    .file-info {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .file-name {
-      font-weight: 500;
-      margin-bottom: 2px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .file-size {
-      font-size: 0.9em;
-      color: #666;
-    }
-    
-    .file-status {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.85em;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    
-    .status-pending { background: #fff3cd; color: #856404; }
-    .status-uploading { background: #d1ecf1; color: #0c5460; }
-    .status-completed { background: #d4edda; color: #155724; }
-    .status-error { background: #f8d7da; color: #721c24; }
-    .status-paused { background: #e2e3e5; color: #383d41; }
-    
-    .button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s;
-      text-decoration: none;
-      display: inline-block;
-      text-align: center;
-    }
-    
-    .button-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-    
-    .button-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-    
-    .button-secondary {
-      background: #6c757d;
-      color: white;
-    }
-    
-    .button-success {
-      background: #28a745;
-      color: white;
-    }
-    
-    .button-danger {
-      background: #dc3545;
-      color: white;
-    }
-    
-    .button-warning {
-      background: #ffc107;
-      color: #212529;
-    }
-    
-    .button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-    
-    .button-group {
-      display: flex;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .task-list {
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    
-    .task-item {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
-      border: 1px solid #e9ecef;
-    }
-    
-    .task-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    
-    .task-name {
-      font-weight: 500;
-      color: #495057;
-    }
-    
-    .task-actions {
-      display: flex;
-      gap: 5px;
-    }
-    
-    .task-actions .button {
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-    
-    .task-progress {
-      height: 6px;
-      background: #e9ecef;
-      border-radius: 3px;
-      overflow: hidden;
-      margin: 8px 0;
-    }
-    
-    .task-progress-fill {
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      transition: width 0.3s;
-    }
-    
-    .task-info {
-      font-size: 0.85em;
-      color: #6c757d;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    .log-container {
-      background: #1e1e1e;
-      color: #ffffff;
-      border-radius: 8px;
-      padding: 15px;
-      font-family: 'Consolas', 'Monaco', monospace;
-      font-size: 0.85em;
-      max-height: 300px;
-      overflow-y: auto;
-      margin-top: 15px;
-    }
-    
-    .log-entry {
-      margin-bottom: 3px;
-      word-wrap: break-word;
-    }
-    
-    .log-timestamp {
-      color: #666;
-    }
-    
-    .log-success { color: #4CAF50; }
-    .log-error { color: #f44336; }
-    .log-warning { color: #ff9800; }
-    .log-info { color: #2196F3; }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    .stat-item {
-      text-align: center;
-      padding: 10px;
-      background: rgba(102, 126, 234, 0.1);
-      border-radius: 8px;
-    }
-    
-    .stat-value {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #667eea;
-    }
-    
-    .stat-label {
-      font-size: 0.85em;
-      color: #666;
-      margin-top: 5px;
-    }
-    
-    .health-indicator {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-right: 8px;
-    }
-    
-    .health-healthy { background: #28a745; }
-    .health-warning { background: #ffc107; }
-    .health-unhealthy { background: #dc3545; }
-    
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
-    
-    .tooltip-text {
-      visibility: hidden;
-      width: 200px;
-      background-color: #333;
-      color: #fff;
-      text-align: center;
-      border-radius: 6px;
-      padding: 5px;
+    .progress-shimmer::after {
+      content: '';
       position: absolute;
-      z-index: 1;
-      bottom: 125%;
-      left: 50%;
-      margin-left: -100px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-size: 0.85em;
-    }
-    
-    .tooltip:hover .tooltip-text {
-      visibility: visible;
-      opacity: 1;
-    }
-    
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 15px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 1000;
-      transform: translateX(400px);
-      transition: transform 0.3s;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification-success { background: #28a745; }
-    .notification-error { background: #dc3545; }
-    .notification-warning { background: #ffc107; color: #212529; }
-    .notification-info { background: #17a2b8; }
-    
-    @media (max-width: 768px) {
-      .main-content {
-        grid-template-columns: 1fr;
-      }
-      
-      .config-grid {
-        grid-template-columns: 1fr;
-      }
-      
-      .header h1 {
-        font-size: 2em;
-      }
-      
-      .system-status {
-        flex-direction: column;
-        gap: 10px;
-      }
-    }
-    
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
       top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+      animation: shimmer 2s infinite;
     }
     
-    .modal-content {
-      background-color: white;
-      margin: 5% auto;
-      padding: 20px;
-      border-radius: 15px;
-      width: 90%;
-      max-width: 600px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      animation: modalShow 0.3s ease-out;
+    .card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     
-    @keyframes modalShow {
-      from {
-        opacity: 0;
-        transform: translateY(-50px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .notification-enter {
+      transform: translateX(100%);
+      opacity: 0;
     }
     
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
+    .notification-enter-active {
+      transform: translateX(0);
+      opacity: 1;
+      transition: all 0.3s ease-out;
     }
     
-    .close:hover {
-      color: #000;
+    .notification-leave-active {
+      transform: translateX(100%);
+      opacity: 0;
+      transition: all 0.3s ease-in;
     }
   </style>
 </head>
-<body>
-  <div class="container">
+
+<body class="min-h-screen bg-gray-50">
+  <div x-data="fileUploadApp()" x-init="init()" class="container mx-auto px-4 py-4 max-w-6xl">
+    
     <!-- 系统状态头部 -->
-    <div class="header">
-      <h1>🚀 企业级文件上传系统</h1>
-      <div class="system-status">
-        <div class="status-item">
-          <div class="health-indicator health-healthy" id="healthIndicator"></div>
-          <span>系统状态</span>
-          <div class="status-value" id="systemStatus">检查中...</div>
-        </div>
-        <div class="status-item">
-          <span>活跃任务</span>
-          <div class="status-value" id="activeTasks">0</div>
-        </div>
-        <div class="status-item">
-          <span>内存使用</span>
-          <div class="status-value" id="memoryUsage">0 MB</div>
-        </div>
-        <div class="status-item">
-          <span>上传速度</span>
-          <div class="status-value" id="uploadSpeed">0 MB/s</div>
+    <div class="card p-4 mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 text-center mb-4">
+        🚀 文件上传系统
+      </h1>
+      
+      <!-- 系统状态指示器 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="text-center p-3 rounded-lg bg-blue-50 border border-blue-200">
+          <div class="flex items-center justify-center mb-1">
+            <div class="w-2 h-2 rounded-full mr-1" 
+                 :class="systemHealth === 'healthy' ? 'bg-green-500' : 
+                         systemHealth === 'warning' ? 'bg-yellow-500' : 'bg-red-500'"></div>
+            <span class="text-gray-700 text-sm font-medium">系统状态</span>
+    </div>
+          <div class="text-lg font-bold text-gray-800" x-text="systemHealthText"></div>
+    </div>
+        
+        <div class="text-center p-3 rounded-lg bg-green-50 border border-green-200">
+          <span class="text-gray-700 text-sm font-medium block mb-1">活跃任务</span>
+          <div class="text-lg font-bold text-gray-800" x-text="metrics.activeTasks"></div>
+    </div>
+        
+        <div class="text-center p-3 rounded-lg bg-purple-50 border border-purple-200">
+          <span class="text-gray-700 text-sm font-medium block mb-1">内存使用</span>
+          <div class="text-lg font-bold text-gray-800" x-text="metrics.memoryUsage + ' MB'"></div>
+  </div>
+  
+        <div class="text-center p-3 rounded-lg bg-orange-50 border border-orange-200">
+          <span class="text-gray-700 text-sm font-medium block mb-1">上传速度</span>
+          <div class="text-lg font-bold text-gray-800" x-text="formatSpeed(uploadSpeed)"></div>
         </div>
       </div>
-    </div>
-
-    <div class="main-content">
+  </div>
+  
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      
       <!-- 主上传面板 -->
-      <div class="upload-panel">
-        <!-- 配置区域 -->
-        <div class="card">
-          <h3>⚙️ 上传配置</h3>
-          <div class="config-grid">
-            <div class="form-group">
-              <label>分片大小</label>
-              <select id="chunkSizeSelect">
-                <option value="5">5MB (网络较慢)</option>
-                <option value="10" selected>10MB (默认)</option>
-                <option value="20">20MB (网络良好)</option>
-                <option value="50">50MB (高速网络)</option>
-                <option value="100">100MB (千兆网络)</option>
+      <div class="lg:col-span-3 space-y-4">
+        
+        <!-- 配置面板 -->
+        <div class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+            ⚙️ 上传配置
+          </h3>
+          
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-1">分片大小</label>
+              <select x-model="config.chunkSize" @change="updateChunkSize()" 
+                      class="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="5">5MB</option>
+                <option value="10">10MB</option>
+                <option value="20">20MB</option>
+                <option value="50">50MB</option>
+                <option value="100">100MB</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>并发数量</label>
-              <select id="concurrentSelect">
-                <option value="1">1 (单线程)</option>
-                <option value="2">2 (推荐)</option>
-                <option value="3" selected>3 (默认)</option>
-                <option value="4">4 (高性能)</option>
-                <option value="5">5 (最大)</option>
+  </div>
+  
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-1">并发数量</label>
+              <select x-model="config.concurrent" 
+                      class="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>启用MD5校验</label>
-              <select id="enableMD5">
-                <option value="true" selected>启用</option>
+    </div>
+            
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-1">MD5校验</label>
+              <select x-model="config.enableMD5" 
+                      class="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="true">启用</option>
                 <option value="false">禁用</option>
               </select>
-            </div>
-            <div class="form-group">
-              <label>重试次数</label>
-              <select id="retryCount">
+  </div>
+  
+            <div>
+              <label class="block text-gray-700 text-sm font-medium mb-1">重试次数</label>
+              <select x-model="config.retryCount" 
+                      class="w-full px-2 py-1 bg-white border border-gray-300 rounded text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                 <option value="1">1次</option>
-                <option value="3" selected>3次</option>
+                <option value="3">3次</option>
                 <option value="5">5次</option>
                 <option value="10">10次</option>
               </select>
@@ -629,978 +185,1059 @@
         </div>
 
         <!-- 文件上传区域 -->
-        <div class="upload-area" id="uploadArea">
-          <div class="upload-icon">📁</div>
-          <p>拖拽文件到此处或点击选择文件</p>
-          <p style="color: #666; font-size: 0.9em;">支持单文件和文件夹上传，自动断点续传</p>
-          <input type="file" id="fileInput" class="file-input" multiple>
-          <input type="file" id="folderInput" class="file-input" webkitdirectory>
-        </div>
-
-        <div class="button-group">
-          <label class="button button-secondary" for="fileInput">选择文件</label>
-          <label class="button button-secondary" for="folderInput">选择文件夹</label>
-          <button class="button button-primary" id="uploadBtn" onclick="startUpload()">开始上传</button>
-          <button class="button button-warning" id="pauseBtn" onclick="pauseUpload()" style="display: none;">暂停</button>
-          <button class="button button-danger" id="cancelBtn" onclick="cancelUpload()" style="display: none;">取消</button>
+        <div class="card p-4">
+          <div 
+            @drop.prevent="handleDrop($event)"
+            @dragover.prevent="dragOver = true"
+            @dragleave.prevent="dragOver = false"
+            :class="dragOver ? 'upload-area-hover' : ''"
+            class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-all duration-300 hover:bg-gray-50">
+            
+            <div class="text-4xl mb-3" :class="dragOver ? 'animate-bounce-slow' : ''">📁</div>
+            <p class="text-gray-700 text-base mb-2">拖拽文件到此处或使用下方按钮选择</p>
+            <p class="text-gray-500 text-sm">支持单文件和文件夹上传，自动断点续传</p>
+            <p class="text-gray-400 text-xs mt-1">💡 文件夹选择：进入目标文件夹后点击"选择文件夹"按钮</p>
+            
+            <input type="file" 
+                   x-ref="fileInput" 
+                   @change="handleFileSelect($event)" 
+                   multiple 
+                   class="hidden">
+            <input type="file" 
+                   x-ref="folderInput" 
+                   @change="handleFolderSelect($event)" 
+                   webkitdirectory 
+                   class="hidden">
+  </div>
+  
+          <!-- 操作按钮 -->
+          <div class="flex flex-wrap gap-2 mt-4">
+            <button @click="selectFiles()" 
+                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
+              📄 选择文件
+            </button>
+            
+            <button @click="selectFolder()" 
+                    class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded text-sm transition-colors duration-200"
+                    title="选择整个文件夹进行上传，包含子文件夹中的所有文件">
+              📁 选择文件夹
+            </button>
+            
+            <button @click="startUpload()" 
+                    :disabled="files.length === 0 || (isUploading && !isPaused)"
+                    class="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded text-sm transition-colors duration-200">
+              <span x-show="!isUploading">🚀 开始上传</span>
+              <span x-show="isUploading && isPaused">▶️ 继续上传</span>
+            </button>
+            
+            <button x-show="isUploading && !isPaused" 
+                    @click="pauseUpload()" 
+                    class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm transition-colors duration-200">
+              ⏸️ 暂停
+            </button>
+            
+            <button x-show="isUploading" 
+                    @click="cancelUpload()" 
+                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors duration-200">
+              ❌ 取消
+            </button>
+          </div>
         </div>
 
         <!-- 进度显示 -->
-        <div class="progress-section" id="progressSection" style="display: none;">
-          <div class="progress-text">
-            <span id="progressText">准备中...</span>
-            <span style="float: right;" id="remainingTime">--:--:--</span>
+        <div x-show="isUploading || progress.total > 0" class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 上传进度</h3>
+          
+          <div class="mb-3">
+            <div class="flex justify-between text-gray-700 mb-2 text-sm">
+              <span x-text="`${progress.completed}/${progress.total} (${progress.percentage.toFixed(1)}%)`"></span>
+              <span x-text="remainingTime"></span>
+            </div>
+            
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full relative progress-shimmer transition-all duration-300" 
+                   :style="`width: ${progress.percentage}%`"></div>
+            </div>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value" id="completedFiles">0</div>
-              <div class="stat-label">已完成</div>
+          
+          <!-- 统计信息 -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="text-center p-2 bg-blue-50 rounded border border-blue-200">
+              <div class="text-lg font-bold text-gray-800" x-text="progress.completed"></div>
+              <div class="text-gray-600 text-xs">已完成</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="failedFiles">0</div>
-              <div class="stat-label">失败</div>
+            <div class="text-center p-2 bg-red-50 rounded border border-red-200">
+              <div class="text-lg font-bold text-gray-800" x-text="progress.failed"></div>
+              <div class="text-gray-600 text-xs">失败</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="totalSize">0 MB</div>
-              <div class="stat-label">总大小</div>
+            <div class="text-center p-2 bg-green-50 rounded border border-green-200">
+              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.totalSize)"></div>
+              <div class="text-gray-600 text-xs">总大小</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="uploadedSize">0 MB</div>
-              <div class="stat-label">已上传</div>
+            <div class="text-center p-2 bg-purple-50 rounded border border-purple-200">
+              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.uploadedSize)"></div>
+              <div class="text-gray-600 text-xs">已上传</div>
             </div>
           </div>
         </div>
 
         <!-- 文件列表 -->
-        <div class="card">
-          <h3>📋 文件列表</h3>
-          <div class="file-list" id="fileList">
-            <div style="text-align: center; color: #666; padding: 20px;">
-              暂无文件，请选择要上传的文件
+        <div class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📋 文件列表</h3>
+          
+          <div x-show="files.length === 0" class="text-center py-8 text-gray-500">
+            暂无文件，请选择要上传的文件
+          </div>
+          
+          <div x-show="files.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
+            <div class="bg-gray-50 rounded p-2 mb-3 text-sm">
+              <span class="text-gray-700 font-medium">
+                共 <span x-text="files.length"></span> 个文件，总大小: <span x-text="formatFileSize(totalFileSize)"></span>
+              </span>
             </div>
+            
+            <template x-for="file in files" :key="file.id">
+              <div class="bg-gray-50 rounded p-3 flex items-center justify-between">
+                <div class="flex-1 min-w-0">
+                  <div class="text-gray-800 font-medium truncate text-sm" x-text="file.name"></div>
+                  <div class="text-gray-600 text-xs">
+                    <span x-text="formatFileSize(file.size)"></span>
+                    <span x-show="file.progress > 0" x-text="`(${file.progress}%)`"></span>
+                  </div>
+                </div>
+                
+                <div class="ml-3">
+                  <span class="px-2 py-1 rounded text-xs font-medium"
+                        :class="getStatusClass(file.status)" 
+                        x-text="getStatusText(file.status)"></span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
-        <!-- 日志区域 -->
-        <div class="card">
-          <h3>📝 操作日志</h3>
-          <div class="log-container" id="logContainer">
-            <div class="log-entry">
-              <span class="log-timestamp">[系统]</span> 系统已就绪，等待文件上传...
-            </div>
+        <!-- 操作日志 -->
+        <div class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📝 操作日志</h3>
+          
+          <div class="bg-gray-100 rounded p-3 max-h-48 overflow-y-auto font-mono text-xs">
+            <template x-for="log in logs.slice(-30)" :key="log.id">
+              <div class="mb-1">
+                <span class="text-gray-500" x-text="log.timestamp"></span>
+                <span :class="getLogClass(log.level)" x-text="log.message"></span>
+              </div>
+            </template>
           </div>
         </div>
       </div>
 
       <!-- 侧边栏 -->
-      <div class="sidebar">
+      <div class="space-y-4">
+        
         <!-- 任务管理 -->
-        <div class="card">
-          <h3>📊 任务管理</h3>
-          <div class="button-group">
-            <button class="button button-secondary" onclick="refreshServerTasks()">刷新任务</button>
-            <button class="button button-warning" onclick="cleanupTasks()">清理任务</button>
+        <div class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 任务管理</h3>
+          
+          <div class="space-y-2 mb-3">
+            <button @click="refreshServerTasks()" 
+                    class="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
+              🔄 刷新任务
+            </button>
+            <button @click="cleanupTasks()" 
+                    class="w-full px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm transition-colors duration-200">
+              🧹 清理任务
+            </button>
           </div>
-          <div class="task-list" id="serverTaskList">
-            <div style="text-align: center; color: #666; padding: 20px;">
+          
+          <div class="space-y-2 max-h-64 overflow-y-auto">
+            <div x-show="serverTasks.length === 0" class="text-center py-6 text-gray-500 text-sm">
               点击刷新加载服务器任务
             </div>
+            
+            <template x-for="task in serverTasks" :key="task.file_id">
+              <div class="bg-gray-50 rounded p-2">
+                <div class="flex justify-between items-start mb-1">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-gray-800 font-medium text-xs truncate" x-text="task.filename"></div>
+                    <div class="text-gray-600 text-xs" x-text="formatFileSize(task.file_size)"></div>
+                  </div>
+                  <div class="ml-2">
+                    <span class="px-1 py-0.5 rounded text-xs"
+                          :class="getStatusClass(task.status)" 
+                          x-text="getStatusText(task.status)"></span>
+                  </div>
+                </div>
+                
+                <!-- 进度条 -->
+                <div class="w-full bg-gray-200 rounded-full h-1 mb-1">
+                  <div class="h-full bg-blue-400 rounded-full" 
+                       :style="`width: ${task.completion_rate || 0}%`"></div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="flex gap-1">
+                  <button x-show="task.status === 'paused' || task.status === 'failed'" 
+                          @click="resumeTask(task.file_id)"
+                          class="text-xs px-1 py-0.5 bg-green-500 hover:bg-green-600 text-white rounded">
+                    恢复
+                  </button>
+                  <button x-show="task.status === 'uploading'" 
+                          @click="pauseTask(task.file_id)"
+                          class="text-xs px-1 py-0.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded">
+                    暂停
+                  </button>
+                  <button @click="deleteTask(task.file_id)"
+                          class="text-xs px-1 py-0.5 bg-red-500 hover:bg-red-600 text-white rounded">
+                    删除
+                  </button>
+                  <button @click="showTaskDetail(task)"
+                          class="text-xs px-1 py-0.5 bg-blue-500 hover:bg-blue-600 text-white rounded">
+                    详情
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
         <!-- 系统监控 -->
-        <div class="card">
-          <h3>📈 系统监控</h3>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value" id="totalTasks">0</div>
-              <div class="stat-label">总任务数</div>
+        <div class="card p-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">📈 系统监控</h3>
+          
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="text-center p-2 bg-blue-50 rounded border border-blue-200">
+              <div class="text-lg font-bold text-gray-800" x-text="taskStats.total"></div>
+              <div class="text-gray-600 text-xs">总任务</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="successRate">0%</div>
-              <div class="stat-label">成功率</div>
+            <div class="text-center p-2 bg-green-50 rounded border border-green-200">
+              <div class="text-lg font-bold text-gray-800" x-text="taskStats.successRate + '%'"></div>
+              <div class="text-gray-600 text-xs">成功率</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="diskUsage">0%</div>
-              <div class="stat-label">磁盘使用</div>
+            <div class="text-center p-2 bg-purple-50 rounded border border-purple-200">
+              <div class="text-lg font-bold text-gray-800" x-text="systemInfo.diskUsage + '%'"></div>
+              <div class="text-gray-600 text-xs">磁盘使用</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value" id="goroutines">0</div>
-              <div class="stat-label">协程数</div>
+            <div class="text-center p-2 bg-orange-50 rounded border border-orange-200">
+              <div class="text-lg font-bold text-gray-800" x-text="metrics.goroutines"></div>
+              <div class="text-gray-600 text-xs">协程数</div>
             </div>
           </div>
-          <button class="button button-secondary" onclick="showSystemInfo()" style="width: 100%;">详细信息</button>
+          
+          <button @click="showSystemInfo()" 
+                  class="w-full px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded text-sm transition-colors duration-200">
+            🖥️ 详细信息
+          </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- 系统信息模态框 -->
-  <div id="systemModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h2>🖥️ 系统信息</h2>
-      <div id="systemInfoContent">
-        正在加载系统信息...
-      </div>
+    <!-- 通知容器 -->
+    <div class="fixed top-4 right-4 z-50 space-y-2">
+      <template x-for="notification in notifications" :key="notification.id">
+        <div x-show="notification.show"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="transform translate-x-full opacity-0"
+             x-transition:enter-end="transform translate-x-0 opacity-100"
+             x-transition:leave="transition ease-in duration-300"
+             x-transition:leave-start="transform translate-x-0 opacity-100"
+             x-transition:leave-end="transform translate-x-full opacity-0"
+             class="px-6 py-4 rounded-lg shadow-lg max-w-sm"
+             :class="getNotificationClass(notification.type)">
+          <div class="flex items-center">
+            <span x-text="getNotificationIcon(notification.type)" class="mr-2"></span>
+            <span x-text="notification.message" class="flex-1"></span>
+          </div>
+        </div>
+      </template>
     </div>
-  </div>
 
-  <!-- 任务详情模态框 -->
-  <div id="taskModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h2>📋 任务详情</h2>
-      <div id="taskDetailContent">
-        正在加载任务详情...
+    <!-- 模态框 -->
+    <div x-show="showModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         style="display: none;">
+      
+      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="closeModal()"></div>
+        
+        <div class="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800" x-text="modalTitle"></h3>
+            <button @click="closeModal()" class="text-gray-500 hover:text-gray-700">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="text-gray-800" x-html="modalContent"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // 全局变量
-    let CHUNK_SIZE = 10 * 1024 * 1024; // 10MB
-    let uploadQueue = [];
-    let isUploading = false;
-    let isPaused = false;
-    let cancelFlag = false;
-    let concurrentLimit = 3;
-    let enableMD5Check = true;
-    let retryCount = 3;
-    let activeTasks = 0;
-    let completedTasks = 0;
-    let failedTasks = 0;
-    let startTime = 0;
-    let totalUploadedBytes = 0;
-    let lastUploadedBytes = 0;
-    let lastSpeedUpdate = 0;
-
-    // 初始化
-    document.addEventListener('DOMContentLoaded', function() {
-      initializeSystem();
-      setupEventListeners();
-      startMonitoring();
-    });
-
-    function initializeSystem() {
-      log('系统初始化中...', 'info');
-      checkSystemHealth();
-      refreshServerTasks();
-      updateSystemStatus();
-    }
-
-    function setupEventListeners() {
-      // 文件选择
-      document.getElementById('fileInput').addEventListener('change', handleFileSelect);
-      document.getElementById('folderInput').addEventListener('change', handleFileSelect);
-
-      // 拖拽上传
-      const uploadArea = document.getElementById('uploadArea');
-      uploadArea.addEventListener('dragover', handleDragOver);
-      uploadArea.addEventListener('dragleave', handleDragLeave);
-      uploadArea.addEventListener('drop', handleDrop);
-      uploadArea.addEventListener('click', () => document.getElementById('fileInput').click());
-
-      // 配置变更
-      document.getElementById('chunkSizeSelect').addEventListener('change', updateChunkSize);
-      document.getElementById('concurrentSelect').addEventListener('change', updateConcurrentLimit);
-      document.getElementById('enableMD5').addEventListener('change', updateMD5Setting);
-      document.getElementById('retryCount').addEventListener('change', updateRetryCount);
-
-      // 窗口关闭前保存状态
-      window.addEventListener('beforeunload', (e) => {
-        if (isUploading) {
-          e.preventDefault();
-          e.returnValue = '上传正在进行中，确定要离开吗？';
-        }
-      });
-    }
-
-    function startMonitoring() {
-      // 每5秒更新系统状态
-      setInterval(updateSystemStatus, 5000);
-      // 每30秒检查系统健康状态
-      setInterval(checkSystemHealth, 30000);
-      // 每秒更新上传速度
-      setInterval(updateUploadSpeed, 1000);
-    }
-
-    // 文件处理
-    function handleFileSelect(event) {
-      const files = Array.from(event.target.files);
-      addFilesToQueue(files);
-    }
-
-    function handleDragOver(event) {
-      event.preventDefault();
-      event.currentTarget.classList.add('dragover');
-    }
-
-    function handleDragLeave(event) {
-      event.currentTarget.classList.remove('dragover');
-    }
-
-    function handleDrop(event) {
-      event.preventDefault();
-      event.currentTarget.classList.remove('dragover');
-      
-      const files = Array.from(event.dataTransfer.files);
-      addFilesToQueue(files);
-    }
-
-    function addFilesToQueue(files) {
-      for (const file of files) {
-        uploadQueue.push({
-          file: file,
-          status: 'pending',
-          progress: 0,
-          uploadedBytes: 0,
-          fileId: generateFileId(file)
-        });
-      }
-      
-      updateFileList();
-      log(`添加了 ${files.length} 个文件到上传队列`, 'info');
-      showNotification(`已添加 ${files.length} 个文件`, 'success');
-    }
-
-    function generateFileId(file) {
-      const relativePath = file.webkitRelativePath || file.name;
-      return `${relativePath}-${file.size}-${Date.now()}`;
-    }
-
-    function updateFileList() {
-      const fileList = document.getElementById('fileList');
-      
-      if (uploadQueue.length === 0) {
-        fileList.innerHTML = `
-          <div style="text-align: center; color: #666; padding: 20px;">
-            暂无文件，请选择要上传的文件
-          </div>
-        `;
-        return;
-      }
-
-      const totalSize = uploadQueue.reduce((sum, item) => sum + item.file.size, 0);
-      
-      let html = `
-        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
-          <strong>共 ${uploadQueue.length} 个文件，总大小: ${formatFileSize(totalSize)}</strong>
-        </div>
-      `;
-
-      uploadQueue.forEach((item, index) => {
-        const statusClass = `status-${item.status}`;
-        const statusText = getStatusText(item.status);
+    function fileUploadApp() {
+      return {
+        // 基础状态
+        dragOver: false,
+        isUploading: false,
+        isPaused: false,
+        cancelFlag: false,
         
-        html += `
-          <div class="file-item">
-            <div class="file-info">
-              <div class="file-name" title="${item.file.webkitRelativePath || item.file.name}">
-                ${item.file.webkitRelativePath || item.file.name}
-              </div>
-              <div class="file-size">
-                ${formatFileSize(item.file.size)} 
-                ${item.progress > 0 ? `(${item.progress}%)` : ''}
-              </div>
-            </div>
-            <div class="file-status ${statusClass}">${statusText}</div>
-          </div>
-        `;
-      });
-
-      fileList.innerHTML = html;
-    }
-
-    function getStatusText(status) {
-      const statusMap = {
-        'pending': '等待',
-        'uploading': '上传中',
-        'completed': '完成',
-        'error': '失败',
-        'paused': '暂停'
-      };
-      return statusMap[status] || '未知';
-    }
-
-    // 配置更新
-    function updateChunkSize() {
-      const sizeInMB = parseInt(document.getElementById('chunkSizeSelect').value);
-      CHUNK_SIZE = sizeInMB * 1024 * 1024;
-      log(`分片大小调整为: ${sizeInMB}MB`, 'info');
-    }
-
-    function updateConcurrentLimit() {
-      concurrentLimit = parseInt(document.getElementById('concurrentSelect').value);
-      log(`并发数量调整为: ${concurrentLimit}`, 'info');
-    }
-
-    function updateMD5Setting() {
-      enableMD5Check = document.getElementById('enableMD5').value === 'true';
-      log(`MD5校验${enableMD5Check ? '已启用' : '已禁用'}`, 'info');
-    }
-
-    function updateRetryCount() {
-      retryCount = parseInt(document.getElementById('retryCount').value);
-      log(`重试次数调整为: ${retryCount}`, 'info');
-    }
-
-    // 上传控制
-    async function startUpload() {
-      if (uploadQueue.length === 0) {
-        showNotification('请先选择要上传的文件', 'warning');
-        return;
-      }
-
-      if (isUploading && !isPaused) {
-        showNotification('上传正在进行中', 'warning');
-        return;
-      }
-
-      isUploading = true;
-      isPaused = false;
-      cancelFlag = false;
-      startTime = Date.now();
-      lastUploadedBytes = totalUploadedBytes;
-      lastSpeedUpdate = Date.now();
-
-      updateUploadControls();
-      document.getElementById('progressSection').style.display = 'block';
-
-      log(`开始${document.getElementById('uploadBtn').textContent === '继续上传' ? '继续' : ''}上传，共 ${uploadQueue.length} 个文件`, 'info');
-
-      try {
-        await concurrentUpload();
-        log(`上传完成: ${completedTasks}/${uploadQueue.length} 个文件成功`, 'success');
-        showNotification('所有文件上传完成！', 'success');
-      } catch (error) {
-        log(`上传出错: ${error.message}`, 'error');
-        showNotification('上传过程中出现错误', 'error');
-      } finally {
-        isUploading = false;
-        updateUploadControls();
-        refreshServerTasks();
-      }
-    }
-
-    function pauseUpload() {
-      isPaused = true;
-      log('上传已暂停', 'warning');
-      showNotification('上传已暂停', 'info');
-      updateUploadControls();
-    }
-
-    function cancelUpload() {
-      if (confirm('确定要取消所有上传任务吗？')) {
-        cancelFlag = true;
-        isPaused = false;
-        isUploading = false;
-        log('用户取消上传', 'warning');
-        showNotification('上传已取消', 'warning');
-        updateUploadControls();
-      }
-    }
-
-    function updateUploadControls() {
-      const uploadBtn = document.getElementById('uploadBtn');
-      const pauseBtn = document.getElementById('pauseBtn');
-      const cancelBtn = document.getElementById('cancelBtn');
-
-      if (isUploading && !isPaused) {
-        uploadBtn.style.display = 'none';
-        pauseBtn.style.display = 'inline-block';
-        cancelBtn.style.display = 'inline-block';
-      } else if (isPaused) {
-        uploadBtn.style.display = 'inline-block';
-        uploadBtn.textContent = '继续上传';
-        pauseBtn.style.display = 'none';
-        cancelBtn.style.display = 'inline-block';
-      } else {
-        uploadBtn.style.display = 'inline-block';
-        uploadBtn.textContent = '开始上传';
-        pauseBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-      }
-    }
-
-    // 并发上传
-    async function concurrentUpload() {
-      const pendingFiles = uploadQueue.filter(item => item.status === 'pending' || item.status === 'error');
+        // 配置
+        config: {
+          chunkSize: 10,
+          concurrent: 3,
+          enableMD5: 'true',
+          retryCount: 3
+        },
+        
+        // 文件和任务
+        files: [],
+        serverTasks: [],
+        
+        // 进度和统计
+        progress: {
+          completed: 0,
+          failed: 0,
+          total: 0,
+          percentage: 0,
+          totalSize: 0,
+          uploadedSize: 0
+        },
+        
+        // 系统监控
+        systemHealth: 'checking',
+        metrics: {
+          activeTasks: 0,
+          memoryUsage: 0,
+          goroutines: 0
+        },
+        taskStats: {
+          total: 0,
+          successRate: 0
+        },
+        systemInfo: {
+          diskUsage: 0
+        },
+        
+        // UI状态
+        logs: [],
+        notifications: [],
+        showModal: false,
+        modalTitle: '',
+        modalContent: '',
+        
+        // 性能监控
+        uploadSpeed: 0,
+        lastUploadedBytes: 0,
+        lastSpeedUpdate: Date.now(),
+        startTime: 0,
+        
+        // 初始化
+        init() {
+          this.log('系统初始化中...', 'info');
+          this.checkSystemHealth();
+          this.refreshServerTasks();
+          this.updateSystemStatus();
+          
+          // 定时任务
+          setInterval(() => this.updateSystemStatus(), 5000);
+          setInterval(() => this.checkSystemHealth(), 30000);
+          setInterval(() => this.updateUploadSpeed(), 1000);
+        },
+        
+        // 文件处理
+        selectFiles() {
+          this.$refs.fileInput.click();
+        },
+        
+        selectFolder() {
+          this.showNotification('💡 提示：在文件选择对话框中，请点击进入要上传的文件夹，然后点击对话框右下角的"选择文件夹"或"Upload"按钮', 'info');
+          this.$refs.folderInput.click();
+        },
+        
+        handleFileSelect(event) {
+          const files = Array.from(event.target.files);
+          this.addFilesToQueue(files);
+          // 清空输入框以允许重复选择相同文件
+          event.target.value = '';
+        },
+        
+        handleFolderSelect(event) {
+          const files = Array.from(event.target.files);
+          if (files.length > 0) {
+            // 分析文件夹结构
+            const folderName = files[0].webkitRelativePath.split('/')[0];
+            const fileExtensions = [...new Set(files.map(f => f.name.split('.').pop().toLowerCase()))];
+            const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+            
+            this.log(`✅ 成功选择文件夹 "${folderName}"，包含 ${files.length} 个文件 (${this.formatFileSize(totalSize)})`, 'success');
+            this.showNotification(`📁 已选择文件夹 "${folderName}"，包含 ${files.length} 个文件`, 'success');
+            
+            if (fileExtensions.length > 1) {
+              this.log(`📄 文件类型包括: ${fileExtensions.slice(0, 5).join(', ')}${fileExtensions.length > 5 ? ' 等' : ''}`, 'info');
+            }
+            
+            this.addFilesToQueue(files);
+          } else {
+            this.showNotification('⚠️ 未选择任何文件，请重试', 'warning');
+          }
+          
+          // 清空输入框以允许重复选择相同文件夹
+          event.target.value = '';
+        },
+        
+        handleDrop(event) {
+          this.dragOver = false;
+          const files = Array.from(event.dataTransfer.files);
+          this.addFilesToQueue(files);
+        },
+        
+        addFilesToQueue(files) {
+          for (const file of files) {
+            this.files.push({
+              id: this.generateFileId(file),
+              file: file,
+              name: file.webkitRelativePath || file.name,
+              size: file.size,
+              status: 'pending',
+              progress: 0,
+              uploadedBytes: 0
+            });
+          }
+          
+          this.updateProgress();
+          this.log(`添加了 ${files.length} 个文件到上传队列`, 'info');
+          this.showNotification(`已添加 ${files.length} 个文件`, 'success');
+        },
+        
+        generateFileId(file) {
+          const relativePath = file.webkitRelativePath || file.name;
+          return `${relativePath}-${file.size}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        },
+        
+        // 上传控制
+        async startUpload() {
+          if (this.files.length === 0) {
+            this.showNotification('请先选择要上传的文件', 'warning');
+            return;
+          }
+          
+          this.isUploading = true;
+          this.isPaused = false;
+          this.cancelFlag = false;
+          this.startTime = Date.now();
+          this.lastUploadedBytes = 0;
+          this.lastSpeedUpdate = Date.now();
+          
+          this.log(`开始上传，共 ${this.files.length} 个文件`, 'info');
+          
+          try {
+            await this.concurrentUpload();
+            this.log(`上传完成: ${this.progress.completed}/${this.files.length} 个文件成功`, 'success');
+            this.showNotification('所有文件上传完成！', 'success');
+          } catch (error) {
+            this.log(`上传出错: ${error.message}`, 'error');
+            this.showNotification('上传过程中出现错误', 'error');
+          } finally {
+            this.isUploading = false;
+            this.refreshServerTasks();
+          }
+        },
+        
+        pauseUpload() {
+          this.isPaused = true;
+          this.log('上传已暂停', 'warning');
+          this.showNotification('上传已暂停', 'info');
+        },
+        
+        cancelUpload() {
+          if (confirm('确定要取消所有上传任务吗？')) {
+            this.cancelFlag = true;
+            this.isPaused = false;
+            this.isUploading = false;
+            this.log('用户取消上传', 'warning');
+            this.showNotification('上传已取消', 'warning');
+          }
+        },
+        
+        // 并发上传
+        async concurrentUpload() {
+          const pendingFiles = this.files.filter(f => f.status === 'pending' || f.status === 'error');
       let index = 0;
       const workers = [];
-
-      for (let i = 0; i < concurrentLimit; i++) {
-        workers.push(uploadWorker());
-      }
-
-      async function uploadWorker() {
-        while (index < pendingFiles.length && !cancelFlag && !isPaused) {
+      
+          // 定义上传工作函数
+          const uploadWorker = async () => {
+            while (index < pendingFiles.length && !this.cancelFlag && !this.isPaused) {
           const fileIndex = index++;
-          const item = pendingFiles[fileIndex];
-
-          if (!item || (item.status !== 'pending' && item.status !== 'error')) continue;
-
-          activeTasks++;
-          item.status = 'uploading';
-          updateFileList();
-          updateProgress();
-
-          try {
-            await uploadSingleFile(item);
-            item.status = 'completed';
-            item.progress = 100;
-            completedTasks++;
-            log(`✅ 完成: ${item.file.name}`, 'success');
+              const fileItem = pendingFiles[fileIndex];
+              
+              if (!fileItem || (fileItem.status !== 'pending' && fileItem.status !== 'error')) continue;
+              
+              fileItem.status = 'uploading';
+              this.updateProgress();
+              
+              try {
+                await this.uploadSingleFile(fileItem);
+                fileItem.status = 'completed';
+                fileItem.progress = 100;
+                this.progress.completed++;
+                this.log(`✅ 完成: ${fileItem.name}`, 'success');
           } catch (error) {
-            item.status = 'error';
-            failedTasks++;
-            log(`❌ 失败: ${item.file.name} - ${error.message}`, 'error');
-          }
-
-          activeTasks--;
-          updateFileList();
-          updateProgress();
-        }
+                fileItem.status = 'error';
+                this.progress.failed++;
+                this.log(`❌ 失败: ${fileItem.name} - ${error.message}`, 'error');
+              }
+              
+              this.updateProgress();
+            }
+          };
+          
+          // 创建多个工作线程
+          for (let i = 0; i < this.config.concurrent; i++) {
+            workers.push(uploadWorker());
       }
-
+      
+      // 等待所有工作线程完成
       await Promise.all(workers);
-    }
-
-    // 单文件上传
-    async function uploadSingleFile(item) {
-      const file = item.file;
-      const fileId = item.fileId;
-      const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-      // 检查服务器上的上传状态
+        },
+        
+        // 单文件上传
+        async uploadSingleFile(fileItem) {
+          const file = fileItem.file;
+          const fileId = fileItem.id;
+          const chunkSize = this.config.chunkSize * 1024 * 1024;
+          const totalChunks = Math.ceil(file.size / chunkSize);
+          
+          // 检查服务器上的上传状态
       let uploadedChunks = [];
       try {
-        const response = await fetchWithRetry(`/go-uploader/upload_status?file_id=${encodeURIComponent(fileId)}`);
-        const data = await response.json();
+            const response = await this.fetchWithRetry(`/go-uploader/upload_status?file_id=${encodeURIComponent(fileId)}`);
+            const data = await response.json();
         uploadedChunks = data.uploaded_chunks || [];
-      } catch (error) {
-        log(`获取上传状态失败: ${error.message}`, 'warning');
+          } catch (error) {
+            this.log(`获取上传状态失败: ${error.message}`, 'warning');
       }
 
       // 上传分片
       for (let i = 0; i < totalChunks; i++) {
-        if (cancelFlag || isPaused) {
-          throw new Error('上传被中断');
-        }
-
+            if (this.cancelFlag || this.isPaused) {
+              throw new Error('上传被中断');
+            }
+        
         if (uploadedChunks.includes(i)) {
-          continue; // 跳过已上传的分片
+              continue; // 跳过已上传的分片
         }
 
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(file.size, start + CHUNK_SIZE);
+            const start = i * chunkSize;
+            const end = Math.min(file.size, start + chunkSize);
         const chunk = file.slice(start, end);
 
-        await uploadChunk(fileId, i, chunk, file, item);
+            await this.uploadChunk(fileId, i, chunk, file, fileItem);
+            
+            // 更新进度
+            fileItem.progress = Math.round(((i + 1) / totalChunks) * 100);
+            fileItem.uploadedBytes = (i + 1) * chunkSize;
+            this.lastUploadedBytes += chunk.size;
+          }
+          
+          // 合并文件
+          await this.mergeFile(fileId, file, totalChunks);
+        },
         
-        // 更新进度
-        item.progress = Math.round(((i + 1) / totalChunks) * 100);
-        item.uploadedBytes = (i + 1) * CHUNK_SIZE;
-        updateFileList();
-      }
+        // 上传分片
+        async uploadChunk(fileId, chunkIndex, chunk, file, fileItem) {
+          const formData = new FormData();
+          formData.append('file_id', fileId);
+          formData.append('chunk_index', chunkIndex);
+          formData.append('chunk', chunk);
+          formData.append('relative_path', file.webkitRelativePath || file.name);
+          formData.append('total_chunks', Math.ceil(file.size / (this.config.chunkSize * 1024 * 1024)));
+          formData.append('file_size', file.size);
+          
+          if (this.config.enableMD5 === 'true') {
+            const md5 = await this.calculateMD5(chunk);
+            formData.append('md5', md5);
+          }
+          
+          const response = await this.fetchWithRetry('/go-uploader/upload_chunk', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `上传分片 ${chunkIndex} 失败: ${response.status}`);
+          }
+        },
 
       // 合并文件
-      await mergeFile(fileId, file, totalChunks);
-    }
-
-    // 上传分片
-    async function uploadChunk(fileId, chunkIndex, chunk, file, item) {
-      const formData = new FormData();
-      formData.append('file_id', fileId);
-      formData.append('chunk_index', chunkIndex);
-      formData.append('chunk', chunk);
-      formData.append('relative_path', file.webkitRelativePath || file.name);
-      formData.append('total_chunks', Math.ceil(file.size / CHUNK_SIZE));
-      formData.append('file_size', file.size);
-
-      if (enableMD5Check) {
-        const md5 = await calculateMD5(chunk);
-        formData.append('md5', md5);
-      }
-
-      const response = await fetchWithRetry('/go-uploader/upload_chunk', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `上传分片 ${chunkIndex} 失败: ${response.status}`);
-      }
-
-      totalUploadedBytes += chunk.size;
-    }
-
-    // 合并文件
-    async function mergeFile(fileId, file, totalChunks) {
-      const formData = new FormData();
-      formData.append('file_id', fileId);
-      formData.append('filename', file.name);
-      formData.append('total_chunks', totalChunks);
-      formData.append('relative_path', file.webkitRelativePath || file.name);
-
-      const response = await fetchWithRetry('/go-uploader/merge_chunks', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `合并文件失败: ${response.status}`);
-      }
-
-      const result = await response.json();
-      log(`文件合并成功: ${result.filePath}`, 'success');
-      return result;
-    }
-
-    // 带重试的网络请求
-    async function fetchWithRetry(url, options = {}, attempts = retryCount) {
-      for (let i = 0; i < attempts; i++) {
-        try {
-          const response = await fetch(url, options);
-          if (response.ok) {
-            return response;
-          }
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        } catch (error) {
-          if (i === attempts - 1) {
-            throw error;
+        async mergeFile(fileId, file, totalChunks) {
+          const formData = new FormData();
+          formData.append('file_id', fileId);
+          formData.append('filename', file.name);
+          formData.append('total_chunks', totalChunks);
+          formData.append('relative_path', file.webkitRelativePath || file.name);
+          
+          const response = await this.fetchWithRetry('/go-uploader/merge_chunks', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `合并文件失败: ${response.status}`);
           }
           
-          const delay = Math.min(1000 * Math.pow(2, i), 10000);
-          log(`请求失败，${delay}ms 后重试 (${i + 1}/${attempts}): ${error.message}`, 'warning');
-          await sleep(delay);
-        }
-      }
-    }
-
-    // 计算文件MD5
-    async function calculateMD5(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-          try {
-            const buffer = e.target.result;
-            const hashBuffer = await crypto.subtle.digest('MD5', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            resolve(hashHex);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-      });
-    }
-
-    // 服务器任务管理
-    async function refreshServerTasks() {
-      try {
-        const response = await fetch('/go-uploader/tasks');
-        const data = await response.json();
-        
-        updateServerTaskList(data.tasks || []);
-        updateTaskStats(data.tasks || []);
-      } catch (error) {
-        log(`获取服务器任务失败: ${error.message}`, 'error');
-      }
-    }
-
-    function updateServerTaskList(tasks) {
-      const taskList = document.getElementById('serverTaskList');
-      
-      if (tasks.length === 0) {
-        taskList.innerHTML = `
-          <div style="text-align: center; color: #666; padding: 20px;">
-            暂无服务器任务
-          </div>
-        `;
-        return;
-      }
-
-      let html = '';
-      tasks.forEach(task => {
-        const progressPercent = task.completion_rate || 0;
-        const statusClass = `status-${task.status}`;
-        
-        html += `
-          <div class="task-item">
-            <div class="task-header">
-              <div class="task-name" title="${task.filename}">${task.filename}</div>
-              <div class="task-actions">
-                <button class="button button-secondary" onclick="showTaskDetail('${task.file_id}')">详情</button>
-                ${task.status === 'paused' || task.status === 'failed' ? 
-                  `<button class="button button-success" onclick="resumeTask('${task.file_id}')">恢复</button>` : ''}
-                ${task.status === 'uploading' ? 
-                  `<button class="button button-warning" onclick="pauseTask('${task.file_id}')">暂停</button>` : ''}
-                <button class="button button-danger" onclick="deleteTask('${task.file_id}')">删除</button>
-              </div>
-            </div>
-            <div class="task-progress">
-              <div class="task-progress-fill" style="width: ${progressPercent}%"></div>
-            </div>
-            <div class="task-info">
-              <span class="file-status ${statusClass}">${getStatusText(task.status)}</span>
-              <span>${formatFileSize(task.file_size)}</span>
-              <span>${progressPercent.toFixed(1)}%</span>
-            </div>
-          </div>
-        `;
-      });
-
-      taskList.innerHTML = html;
-    }
-
-    function updateTaskStats(tasks) {
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter(t => t.status === 'completed').length;
-      const successRate = totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(1) : 0;
-
-      document.getElementById('totalTasks').textContent = totalTasks;
-      document.getElementById('successRate').textContent = successRate + '%';
-    }
-
-    async function pauseTask(fileId) {
-      try {
-        const response = await fetch(`/go-uploader/tasks/${fileId}/pause`, {
-          method: 'POST'
-        });
-        
-        if (response.ok) {
-          showNotification('任务已暂停', 'success');
-          refreshServerTasks();
-        } else {
-          const error = await response.json();
-          showNotification(error.error || '暂停任务失败', 'error');
-        }
-      } catch (error) {
-        showNotification('暂停任务失败', 'error');
-      }
-    }
-
-    async function resumeTask(fileId) {
-      try {
-        const response = await fetch(`/go-uploader/tasks/${fileId}/resume`, {
-          method: 'POST'
-        });
-        
-        if (response.ok) {
-          showNotification('任务已恢复', 'success');
-          refreshServerTasks();
-        } else {
-          const error = await response.json();
-          showNotification(error.error || '恢复任务失败', 'error');
-        }
-      } catch (error) {
-        showNotification('恢复任务失败', 'error');
-      }
-    }
-
-    async function deleteTask(fileId) {
-      if (!confirm('确定要删除这个任务吗？')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch(`/go-uploader/tasks/${fileId}`, {
-          method: 'DELETE'
-        });
-        
-        if (response.ok) {
-          showNotification('任务已删除', 'success');
-          refreshServerTasks();
-        } else {
-          const error = await response.json();
-          showNotification(error.error || '删除任务失败', 'error');
-        }
-      } catch (error) {
-        showNotification('删除任务失败', 'error');
-      }
-    }
-
-    async function cleanupTasks() {
-      if (!confirm('确定要清理所有已完成和失败的任务吗？')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch('/go-uploader/tasks/cleanup', {
-          method: 'POST'
-        });
-        
-        if (response.ok) {
           const result = await response.json();
-          showNotification(result.message, 'success');
-          refreshServerTasks();
-        } else {
-          const error = await response.json();
-          showNotification(error.error || '清理任务失败', 'error');
-        }
-      } catch (error) {
-        showNotification('清理任务失败', 'error');
-      }
-    }
-
-    async function showTaskDetail(fileId) {
-      try {
-        const response = await fetch(`/go-uploader/tasks/${fileId}`);
-        const task = await response.json();
+          this.log(`文件合并成功: ${result.filePath}`, 'success');
+      return result;
+        },
         
-        let html = `
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value">${task.filename}</div>
-              <div class="stat-label">文件名</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">${formatFileSize(task.file_size)}</div>
-              <div class="stat-label">文件大小</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">${task.completion_rate?.toFixed(1) || 0}%</div>
-              <div class="stat-label">完成度</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value status-${task.status}">${getStatusText(task.status)}</div>
-              <div class="stat-label">状态</div>
-            </div>
-          </div>
-          <p><strong>文件ID:</strong> ${task.file_id}</p>
-          <p><strong>相对路径:</strong> ${task.relative_path || '无'}</p>
-          <p><strong>总分片数:</strong> ${task.total_chunks}</p>
-          <p><strong>已上传分片:</strong> ${task.uploaded_chunks?.length || 0}</p>
-          <p><strong>创建时间:</strong> ${new Date(task.created_at).toLocaleString()}</p>
-          <p><strong>更新时间:</strong> ${new Date(task.updated_at).toLocaleString()}</p>
-          <p><strong>重试次数:</strong> ${task.retry_count || 0}</p>
-          ${task.file_md5 ? `<p><strong>文件MD5:</strong> ${task.file_md5}</p>` : ''}
-        `;
+        // MD5计算 - 修复版本
+        async calculateMD5(file) {
+          return new Promise((resolve, reject) => {
+            const spark = new SparkMD5.ArrayBuffer();
+            const fileReader = new FileReader();
+            
+            fileReader.onload = function(e) {
+              spark.append(e.target.result);
+              resolve(spark.end());
+            };
+            
+            fileReader.onerror = function() {
+              reject(new Error('文件读取失败'));
+            };
+            
+            fileReader.readAsArrayBuffer(file);
+          });
+        },
         
-        document.getElementById('taskDetailContent').innerHTML = html;
-        document.getElementById('taskModal').style.display = 'block';
-      } catch (error) {
-        showNotification('获取任务详情失败', 'error');
-      }
-    }
-
-    // 系统监控
-    async function checkSystemHealth() {
-      try {
-        const response = await fetch('/go-uploader/health');
-        const health = await response.json();
-        
-        const indicator = document.getElementById('healthIndicator');
-        const statusText = document.getElementById('systemStatus');
-        
-        indicator.className = `health-indicator health-${health.status}`;
-        statusText.textContent = health.status === 'healthy' ? '正常' : 
-                                 health.status === 'warning' ? '警告' : '异常';
-      } catch (error) {
-        const indicator = document.getElementById('healthIndicator');
-        const statusText = document.getElementById('systemStatus');
-        
-        indicator.className = 'health-indicator health-unhealthy';
-        statusText.textContent = '离线';
-      }
-    }
-
-    async function updateSystemStatus() {
-      try {
-        const response = await fetch('/go-uploader/metrics');
-        const metrics = await response.json();
-        
-        document.getElementById('activeTasks').textContent = metrics.metrics.active_tasks || 0;
-        document.getElementById('memoryUsage').textContent = metrics.metrics.memory_mb + ' MB';
-        document.getElementById('goroutines').textContent = metrics.metrics.goroutines || 0;
-        
-        // 更新磁盘使用率
-        const systemResponse = await fetch('/go-uploader/system');
-        const systemData = await systemResponse.json();
-        
-        if (systemData.disk_usage && systemData.disk_usage.usage_percent) {
-          document.getElementById('diskUsage').textContent = 
-            systemData.disk_usage.usage_percent.toFixed(1) + '%';
-        }
-      } catch (error) {
-        // 静默处理监控数据获取失败
-      }
-    }
-
-    function updateUploadSpeed() {
-      if (!isUploading || isPaused) {
-        document.getElementById('uploadSpeed').textContent = '0 MB/s';
-        return;
-      }
-
-      const now = Date.now();
-      const timeDiff = (now - lastSpeedUpdate) / 1000; // 秒
-      const bytesDiff = totalUploadedBytes - lastUploadedBytes;
-      
-      if (timeDiff >= 1) {
-        const speed = bytesDiff / timeDiff; // 字节/秒
-        const speedMB = speed / (1024 * 1024); // MB/s
-        
-        document.getElementById('uploadSpeed').textContent = speedMB.toFixed(2) + ' MB/s';
-        
-        lastUploadedBytes = totalUploadedBytes;
-        lastSpeedUpdate = now;
-      }
-    }
-
-    async function showSystemInfo() {
-      try {
-        const response = await fetch('/go-uploader/system');
-        const data = await response.json();
-        
-        let html = `
-          <h3>🖥️ 系统信息</h3>
-          <p><strong>Go版本:</strong> ${data.system.go_version}</p>
-          <p><strong>协程数:</strong> ${data.system.goroutines}</p>
-          <p><strong>内存分配:</strong> ${data.system.memory_alloc} MB</p>
-          <p><strong>系统内存:</strong> ${data.system.memory_sys} MB</p>
-          <p><strong>GC运行次数:</strong> ${data.system.gc_runs}</p>
+        // 网络请求重试
+        async fetchWithRetry(url, options = {}, attempts = undefined) {
+          const maxAttempts = attempts || this.config.retryCount;
           
-          <h3>⚙️ 配置信息</h3>
-          <p><strong>上传目录:</strong> ${data.config.upload_dir}</p>
-          <p><strong>合并目录:</strong> ${data.config.merged_dir}</p>
-          <p><strong>最大文件大小:</strong> ${formatFileSize(data.config.max_file_size)}</p>
-          <p><strong>最大分片大小:</strong> ${formatFileSize(data.config.max_chunk_size)}</p>
-          <p><strong>并发上传数:</strong> ${data.config.concurrent_uploads}</p>
-          <p><strong>完整性检查:</strong> ${data.config.enable_integrity_check ? '启用' : '禁用'}</p>
-          <p><strong>原子操作:</strong> ${data.config.enable_atomic_operations ? '启用' : '禁用'}</p>
-          
-          <h3>📊 磁盘使用</h3>
-          <p><strong>上传目录大小:</strong> ${formatFileSize(data.disk_usage.upload_dir_size || 0)}</p>
-          <p><strong>合并目录大小:</strong> ${formatFileSize(data.disk_usage.merged_dir_size || 0)}</p>
-          <p><strong>总使用量:</strong> ${formatFileSize(data.disk_usage.total_used || 0)}</p>
-          <p><strong>使用率:</strong> ${(data.disk_usage.usage_percent || 0).toFixed(2)}%</p>
-        `;
+          for (let i = 0; i < maxAttempts; i++) {
+            try {
+              const response = await fetch(url, options);
+              if (response.ok) {
+                return response;
+              }
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (error) {
+              if (i === maxAttempts - 1) {
+                throw error;
+              }
+              
+              const delay = Math.min(1000 * Math.pow(2, i), 10000);
+              this.log(`请求失败，${delay}ms 后重试 (${i + 1}/${maxAttempts}): ${error.message}`, 'warning');
+              await this.sleep(delay);
+            }
+          }
+        },
         
-        document.getElementById('systemInfoContent').innerHTML = html;
-        document.getElementById('systemModal').style.display = 'block';
-      } catch (error) {
-        showNotification('获取系统信息失败', 'error');
-      }
-    }
-
-    // 进度更新
-    function updateProgress() {
-      const totalFiles = uploadQueue.length;
-      const completed = uploadQueue.filter(item => item.status === 'completed').length;
-      const failed = uploadQueue.filter(item => item.status === 'error').length;
-      const progress = totalFiles > 0 ? (completed / totalFiles) * 100 : 0;
-      
-      // 更新进度条
-      document.getElementById('progressFill').style.width = progress + '%';
-      document.getElementById('progressText').textContent = 
-        `${completed}/${totalFiles} (${progress.toFixed(1)}%)`;
-      
-      // 更新统计
-      document.getElementById('completedFiles').textContent = completed;
-      document.getElementById('failedFiles').textContent = failed;
-      
-      const totalSize = uploadQueue.reduce((sum, item) => sum + item.file.size, 0);
-      const uploadedSize = uploadQueue
-        .filter(item => item.status === 'completed')
-        .reduce((sum, item) => sum + item.file.size, 0);
-      
-      document.getElementById('totalSize').textContent = formatFileSize(totalSize);
-      document.getElementById('uploadedSize').textContent = formatFileSize(uploadedSize);
-      
-      // 计算剩余时间
-      if (completed > 0 && startTime > 0) {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const rate = completed / elapsed;
-        const remaining = (totalFiles - completed) / rate;
-        document.getElementById('remainingTime').textContent = formatTime(remaining);
-      } else {
-        document.getElementById('remainingTime').textContent = '--:--:--';
-      }
-    }
-
-    // 模态框控制
-    function closeModal() {
-      document.getElementById('systemModal').style.display = 'none';
-      document.getElementById('taskModal').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-      const systemModal = document.getElementById('systemModal');
-      const taskModal = document.getElementById('taskModal');
-      
-      if (event.target === systemModal) {
-        systemModal.style.display = 'none';
-      }
-      if (event.target === taskModal) {
-        taskModal.style.display = 'none';
-      }
-    }
-
-    // 通知系统
-    function showNotification(message, type = 'info') {
-      const notification = document.createElement('div');
-      notification.className = `notification notification-${type}`;
-      notification.textContent = message;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => notification.classList.add('show'), 100);
-      
-      setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => document.body.removeChild(notification), 300);
-      }, 3000);
-    }
-
-    // 日志系统
-    function log(message, level = 'info') {
-      const logContainer = document.getElementById('logContainer');
-      const timestamp = new Date().toLocaleTimeString();
-      
-      const logEntry = document.createElement('div');
-      logEntry.className = `log-entry log-${level}`;
-      logEntry.innerHTML = `
-        <span class="log-timestamp">[${timestamp}]</span> ${message}
-      `;
-      
-      logContainer.appendChild(logEntry);
-      logContainer.scrollTop = logContainer.scrollHeight;
-      
-      // 限制日志条数
-      const entries = logContainer.querySelectorAll('.log-entry');
-      if (entries.length > 100) {
-        logContainer.removeChild(entries[0]);
-      }
-    }
-
-    // 工具函数
-    function formatFileSize(bytes) {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    function formatTime(seconds) {
-      if (!seconds || seconds === Infinity || isNaN(seconds)) return '--:--:--';
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
+        // 任务管理
+        async refreshServerTasks() {
+          try {
+            const response = await fetch('/go-uploader/tasks');
+            const data = await response.json();
+            this.serverTasks = data.tasks || [];
+            this.updateTaskStats();
+          } catch (error) {
+            this.log(`获取服务器任务失败: ${error.message}`, 'error');
+          }
+        },
+        
+        async pauseTask(fileId) {
+          try {
+            const response = await fetch(`/go-uploader/tasks/${fileId}/pause`, { method: 'POST' });
+            if (response.ok) {
+              this.showNotification('任务已暂停', 'success');
+              this.refreshServerTasks();
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '暂停任务失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('暂停任务失败', 'error');
+          }
+        },
+        
+        async resumeTask(fileId) {
+          try {
+            const response = await fetch(`/go-uploader/tasks/${fileId}/resume`, { method: 'POST' });
+            if (response.ok) {
+              this.showNotification('任务已恢复', 'success');
+              this.refreshServerTasks();
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '恢复任务失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('恢复任务失败', 'error');
+          }
+        },
+        
+        async deleteTask(fileId) {
+          if (!confirm('确定要删除这个任务吗？')) return;
+          
+          try {
+            const response = await fetch(`/go-uploader/tasks/${fileId}`, { method: 'DELETE' });
+            if (response.ok) {
+              this.showNotification('任务已删除', 'success');
+              this.refreshServerTasks();
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '删除任务失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('删除任务失败', 'error');
+          }
+        },
+        
+        async cleanupTasks() {
+          if (!confirm('确定要清理所有已完成和失败的任务吗？')) return;
+          
+          try {
+            const response = await fetch('/go-uploader/tasks/cleanup', { method: 'POST' });
+            if (response.ok) {
+              const result = await response.json();
+              this.showNotification(result.message, 'success');
+              this.refreshServerTasks();
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '清理任务失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('清理任务失败', 'error');
+          }
+        },
+        
+        // 系统监控
+        async checkSystemHealth() {
+          try {
+            const response = await fetch('/go-uploader/health');
+            const health = await response.json();
+            this.systemHealth = health.status;
+          } catch (error) {
+            this.systemHealth = 'unhealthy';
+          }
+        },
+        
+        async updateSystemStatus() {
+          try {
+            const [metricsResponse, systemResponse] = await Promise.all([
+              fetch('/go-uploader/metrics'),
+              fetch('/go-uploader/system')
+            ]);
+            
+            if (metricsResponse.ok) {
+              const metrics = await metricsResponse.json();
+              this.metrics = {
+                activeTasks: metrics.metrics.active_tasks || 0,
+                memoryUsage: metrics.metrics.memory_mb || 0,
+                goroutines: metrics.metrics.goroutines || 0
+              };
+            }
+            
+            if (systemResponse.ok) {
+              const systemData = await systemResponse.json();
+              if (systemData.disk_usage && systemData.disk_usage.usage_percent) {
+                this.systemInfo.diskUsage = systemData.disk_usage.usage_percent.toFixed(1);
+              }
+            }
+          } catch (error) {
+            // 静默处理监控数据获取失败
+          }
+        },
+        
+        updateUploadSpeed() {
+          if (!this.isUploading || this.isPaused) {
+            this.uploadSpeed = 0;
+            return;
+          }
+          
+          const now = Date.now();
+          const timeDiff = (now - this.lastSpeedUpdate) / 1000;
+          
+          if (timeDiff >= 1) {
+            const bytesDiff = this.lastUploadedBytes;
+            this.uploadSpeed = bytesDiff / timeDiff;
+            this.lastUploadedBytes = 0;
+            this.lastSpeedUpdate = now;
+          }
+        },
+        
+        // 详情和模态框
+        async showTaskDetail(task) {
+          try {
+            const response = await fetch(`/go-uploader/tasks/${task.file_id}`);
+            const taskDetail = await response.json();
+            
+            this.modalTitle = '📋 任务详情';
+            this.modalContent = `
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div class="text-lg font-bold text-gray-800">${taskDetail.filename}</div>
+                    <div class="text-sm text-gray-600">文件名</div>
+                  </div>
+                  <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div class="text-lg font-bold text-gray-800">${this.formatFileSize(taskDetail.file_size)}</div>
+                    <div class="text-sm text-gray-600">文件大小</div>
+                  </div>
+                  <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div class="text-lg font-bold text-gray-800">${(taskDetail.completion_rate || 0).toFixed(1)}%</div>
+                    <div class="text-sm text-gray-600">完成度</div>
+                  </div>
+                  <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div class="text-lg font-bold text-gray-800">${this.getStatusText(taskDetail.status)}</div>
+                    <div class="text-sm text-gray-600">状态</div>
+                  </div>
+                </div>
+                <div class="space-y-2 text-sm text-gray-700">
+                  <p><strong>文件ID:</strong> ${taskDetail.file_id}</p>
+                  <p><strong>相对路径:</strong> ${taskDetail.relative_path || '无'}</p>
+                  <p><strong>总分片数:</strong> ${taskDetail.total_chunks}</p>
+                  <p><strong>已上传分片:</strong> ${taskDetail.uploaded_chunks?.length || 0}</p>
+                  <p><strong>创建时间:</strong> ${new Date(taskDetail.created_at).toLocaleString()}</p>
+                  <p><strong>更新时间:</strong> ${new Date(taskDetail.updated_at).toLocaleString()}</p>
+                  <p><strong>重试次数:</strong> ${taskDetail.retry_count || 0}</p>
+                  ${taskDetail.file_md5 ? `<p><strong>文件MD5:</strong> ${taskDetail.file_md5}</p>` : ''}
+                </div>
+              </div>
+            `;
+            this.showModal = true;
+          } catch (error) {
+            this.showNotification('获取任务详情失败', 'error');
+          }
+        },
+        
+        async showSystemInfo() {
+          try {
+            const response = await fetch('/go-uploader/system');
+            const data = await response.json();
+            
+            this.modalTitle = '🖥️ 系统信息';
+            this.modalContent = `
+              <div class="space-y-6">
+                <div>
+                  <h4 class="text-lg font-semibold mb-3 text-gray-800">🖥️ 系统信息</h4>
+                  <div class="space-y-2 text-sm text-gray-700">
+                    <p><strong>Go版本:</strong> ${data.system.go_version}</p>
+                    <p><strong>协程数:</strong> ${data.system.goroutines}</p>
+                    <p><strong>内存分配:</strong> ${data.system.memory_alloc} MB</p>
+                    <p><strong>系统内存:</strong> ${data.system.memory_sys} MB</p>
+                    <p><strong>GC运行次数:</strong> ${data.system.gc_runs}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="text-lg font-semibold mb-3 text-gray-800">⚙️ 配置信息</h4>
+                  <div class="space-y-2 text-sm text-gray-700">
+                    <p><strong>上传目录:</strong> ${data.config.upload_dir}</p>
+                    <p><strong>合并目录:</strong> ${data.config.merged_dir}</p>
+                    <p><strong>最大文件大小:</strong> ${this.formatFileSize(data.config.max_file_size)}</p>
+                    <p><strong>最大分片大小:</strong> ${this.formatFileSize(data.config.max_chunk_size)}</p>
+                    <p><strong>并发上传数:</strong> ${data.config.concurrent_uploads}</p>
+                    <p><strong>完整性检查:</strong> ${data.config.enable_integrity_check ? '启用' : '禁用'}</p>
+                    <p><strong>原子操作:</strong> ${data.config.enable_atomic_operations ? '启用' : '禁用'}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 class="text-lg font-semibold mb-3 text-gray-800">📊 磁盘使用</h4>
+                  <div class="space-y-2 text-sm text-gray-700">
+                    <p><strong>上传目录大小:</strong> ${this.formatFileSize(data.disk_usage.upload_dir_size || 0)}</p>
+                    <p><strong>合并目录大小:</strong> ${this.formatFileSize(data.disk_usage.merged_dir_size || 0)}</p>
+                    <p><strong>总使用量:</strong> ${this.formatFileSize(data.disk_usage.total_used || 0)}</p>
+                    <p><strong>使用率:</strong> ${(data.disk_usage.usage_percent || 0).toFixed(2)}%</p>
+                  </div>
+                </div>
+              </div>
+            `;
+            this.showModal = true;
+          } catch (error) {
+            this.showNotification('获取系统信息失败', 'error');
+          }
+        },
+        
+        closeModal() {
+          this.showModal = false;
+        },
+        
+        // 更新和计算
+        updateChunkSize() {
+          this.log(`分片大小调整为: ${this.config.chunkSize}MB`, 'info');
+        },
+        
+        updateProgress() {
+          this.progress.total = this.files.length;
+          this.progress.completed = this.files.filter(f => f.status === 'completed').length;
+          this.progress.failed = this.files.filter(f => f.status === 'error').length;
+          this.progress.percentage = this.progress.total > 0 ? (this.progress.completed / this.progress.total) * 100 : 0;
+          
+          this.progress.totalSize = this.files.reduce((sum, f) => sum + f.size, 0);
+          this.progress.uploadedSize = this.files
+            .filter(f => f.status === 'completed')
+            .reduce((sum, f) => sum + f.size, 0);
+        },
+        
+        updateTaskStats() {
+          this.taskStats.total = this.serverTasks.length;
+          const completed = this.serverTasks.filter(t => t.status === 'completed').length;
+          this.taskStats.successRate = this.taskStats.total > 0 ? ((completed / this.taskStats.total) * 100).toFixed(1) : 0;
+        },
+        
+        // UI辅助方法
+        showNotification(message, type = 'info') {
+          const id = Date.now() + Math.random();
+          const notification = { id, message, type, show: false };
+          
+          this.notifications.push(notification);
+          
+          setTimeout(() => {
+            notification.show = true;
+          }, 100);
+          
+          setTimeout(() => {
+            notification.show = false;
+            setTimeout(() => {
+              this.notifications = this.notifications.filter(n => n.id !== id);
+            }, 300);
+          }, 4000);
+        },
+        
+        log(message, level = 'info') {
+          const timestamp = new Date().toLocaleTimeString();
+          this.logs.push({
+            id: Date.now() + Math.random(),
+            timestamp: `[${timestamp}]`,
+            message: message,
+            level: level
+          });
+          
+          // 限制日志数量
+          if (this.logs.length > 100) {
+            this.logs = this.logs.slice(-100);
+          }
+        },
+        
+        // 样式类辅助方法
+        getStatusClass(status) {
+          const classes = {
+            'pending': 'bg-yellow-100 text-yellow-800',
+            'uploading': 'bg-blue-100 text-blue-800',
+            'completed': 'bg-green-100 text-green-800',
+            'error': 'bg-red-100 text-red-800',
+            'failed': 'bg-red-100 text-red-800',
+            'paused': 'bg-gray-100 text-gray-800'
+          };
+          return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+        
+        getStatusText(status) {
+          const texts = {
+            'pending': '等待',
+            'uploading': '上传中',
+            'completed': '完成',
+            'error': '失败',
+            'failed': '失败',
+            'paused': '暂停'
+          };
+          return texts[status] || '未知';
+        },
+        
+        getLogClass(level) {
+          const classes = {
+            'info': 'text-blue-600',
+            'success': 'text-green-600',
+            'warning': 'text-yellow-600',
+            'error': 'text-red-600'
+          };
+          return classes[level] || 'text-gray-800';
+        },
+        
+        getNotificationClass(type) {
+          const classes = {
+            'success': 'bg-green-500 text-white',
+            'error': 'bg-red-500 text-white',
+            'warning': 'bg-yellow-500 text-black',
+            'info': 'bg-blue-500 text-white'
+          };
+          return classes[type] || 'bg-blue-500 text-white';
+        },
+        
+        getNotificationIcon(type) {
+          const icons = {
+            'success': '✅',
+            'error': '❌',
+            'warning': '⚠️',
+            'info': 'ℹ️'
+          };
+          return icons[type] || 'ℹ️';
+        },
+        
+        // 计算属性
+        get systemHealthText() {
+          const texts = {
+            'healthy': '正常',
+            'warning': '警告',
+            'unhealthy': '异常',
+            'checking': '检查中'
+          };
+          return texts[this.systemHealth] || '未知';
+        },
+        
+        get totalFileSize() {
+          return this.files.reduce((sum, f) => sum + f.size, 0);
+        },
+        
+        get remainingTime() {
+          if (this.progress.completed > 0 && this.startTime > 0) {
+            const elapsed = (Date.now() - this.startTime) / 1000;
+            const rate = this.progress.completed / elapsed;
+            const remaining = (this.progress.total - this.progress.completed) / rate;
+            return this.formatTime(remaining);
+          }
+          return '--:--:--';
+        },
+        
+        // 工具方法
+        formatFileSize(bytes) {
+          if (bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+        
+        formatSpeed(bytesPerSecond) {
+          if (bytesPerSecond === 0) return '0 MB/s';
+          const mbps = bytesPerSecond / (1024 * 1024);
+          return mbps.toFixed(2) + ' MB/s';
+        },
+        
+        formatTime(seconds) {
+          if (!seconds || seconds === Infinity || isNaN(seconds)) return '--:--:--';
+          const hours = Math.floor(seconds / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        },
+        
+        sleep(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        }
+      };
     }
   </script>
 </body>

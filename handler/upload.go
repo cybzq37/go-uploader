@@ -50,8 +50,15 @@ func UploadChunk(c *gin.Context) {
 		return
 	}
 
-	// 创建文件锁防止并发冲突
-	lockPath := filepath.Join(utils.Config.UploadDir, fileID+".lock")
+	// 创建文件锁防止并发冲突 - 使用安全的文件名
+	safeFileID := utils.SanitizeFileID(fileID)
+	lockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".lock")
+	// 确保锁文件目录存在
+	if err := utils.EnsureDirectory(filepath.Dir(lockPath)); err != nil {
+		log.Printf("创建锁文件目录失败: %v", err)
+		c.JSON(500, gin.H{"error": fmt.Sprintf("创建锁文件目录失败: %v", err)})
+		return
+	}
 	lock := utils.NewLockFile(lockPath)
 	if err := lock.Acquire(); err != nil {
 		log.Printf("获取文件锁失败: %v", err)
@@ -126,7 +133,9 @@ func UploadChunk(c *gin.Context) {
 
 // uploadChunkWithAtomicOperation 使用原子操作上传分片
 func uploadChunkWithAtomicOperation(fileID string, index int, file *multipart.FileHeader, chunkMD5, relativePath string) error {
-	saveDir := filepath.Join(utils.Config.UploadDir, fileID)
+	// 使用安全的文件ID作为目录名，实现扁平化存储
+	safeFileID := utils.SanitizeFileID(fileID)
+	saveDir := filepath.Join(utils.Config.UploadDir, safeFileID)
 	if err := utils.EnsureDirectory(saveDir); err != nil {
 		return fmt.Errorf("创建上传目录失败: %v", err)
 	}

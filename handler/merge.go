@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,8 +55,9 @@ func MergeChunks(c *gin.Context) {
 		return
 	}
 
-	// 创建文件锁
-	lockPath := filepath.Join(utils.Config.UploadDir, fileID+".merge.lock")
+	// 创建文件锁 - 使用安全的文件名
+	safeFileID := utils.SanitizeFileID(fileID)
+	lockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".merge.lock")
 	lock := utils.NewLockFile(lockPath)
 	if err := lock.Acquire(); err != nil {
 		c.JSON(409, gin.H{"error": "合并操作正在进行中"})
@@ -119,7 +119,9 @@ type MergeResult struct {
 func mergeChunksWithIntegrityCheck(fileID, filename, relativePath string, totalChunks int, expectedMD5 string, task *utils.UploadTask) (*MergeResult, error) {
 	startTime := time.Now()
 	
-	srcDir := filepath.Join(utils.Config.UploadDir, fileID)
+	// 使用安全的文件ID作为目录名，实现扁平化存储
+	safeFileID := utils.SanitizeFileID(fileID)
+	srcDir := filepath.Join(utils.Config.UploadDir, safeFileID)
 	
 	// 确定目标路径
 	var dstPath string
@@ -193,6 +195,27 @@ func mergeChunksWithIntegrityCheck(fileID, filename, relativePath string, totalC
 			}
 		}
 
+		// 合并成功后，异步清理分片文件和锁文件
+		go func() {
+			// 清理分片目录
+			if err := os.RemoveAll(srcDir); err != nil {
+				log.Printf("清理分片目录失败 [%s]: %v", safeFileID, err)
+			} else {
+				log.Printf("成功清理分片目录: %s", srcDir)
+			}
+			
+			// 清理锁文件
+			lockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".lock")
+			if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+				log.Printf("清理上传锁文件失败 [%s]: %v", safeFileID, err)
+			}
+			
+			mergeLockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".merge.lock")
+			if err := os.Remove(mergeLockPath); err != nil && !os.IsNotExist(err) {
+				log.Printf("清理合并锁文件失败 [%s]: %v", safeFileID, err)
+			}
+		}()
+
 		return &MergeResult{
 			FilePath:  dstPath,
 			MD5:       calculatedMD5,
@@ -243,6 +266,27 @@ func mergeChunksWithIntegrityCheck(fileID, filename, relativePath string, totalC
 		}
 
 		fileInfo, _ := os.Stat(dstPath)
+		
+		// 合并成功后，异步清理分片文件和锁文件
+		go func() {
+			// 清理分片目录
+			if err := os.RemoveAll(srcDir); err != nil {
+				log.Printf("清理分片目录失败 [%s]: %v", safeFileID, err)
+			} else {
+				log.Printf("成功清理分片目录: %s", srcDir)
+			}
+			
+			// 清理锁文件
+			lockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".lock")
+			if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+				log.Printf("清理上传锁文件失败 [%s]: %v", safeFileID, err)
+			}
+			
+			mergeLockPath := filepath.Join(utils.Config.UploadDir, safeFileID+".merge.lock")
+			if err := os.Remove(mergeLockPath); err != nil && !os.IsNotExist(err) {
+				log.Printf("清理合并锁文件失败 [%s]: %v", safeFileID, err)
+			}
+		}()
 		
 		return &MergeResult{
 			FilePath:  dstPath,
