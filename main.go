@@ -50,16 +50,14 @@ func main() {
 		goUploader.POST("/auth/login", handler.Login)
 		goUploader.POST("/auth/logout", handler.Logout)
 		goUploader.GET("/auth/check", handler.CheckAuth)
+		goUploader.POST("/upload_chunk", handler.UploadChunk)
+		goUploader.POST("/merge_chunks", handler.MergeChunks)
+		goUploader.GET("/upload_status", handler.UploadStatus)
 
 		// 应用认证中间件到所有其他API路由
 		api := goUploader.Group("")
 		api.Use(utils.AuthMiddleware())
-		{
-			// API路由
-			api.POST("/upload_chunk", handler.UploadChunk)
-			api.POST("/merge_chunks", handler.MergeChunks)
-			api.GET("/upload_status", handler.UploadStatus)
-			
+		{	
 			// 任务管理API
 			api.GET("/tasks", handler.GetAllTasks)
 			api.GET("/tasks/:file_id", handler.GetTask)

@@ -1743,10 +1743,23 @@
           
           // 添加认证头
           const authHeaders = this.getAuthHeaders();
-          if (options.headers) {
-            options.headers = { ...authHeaders, ...options.headers };
+          
+          // 如果请求体是FormData，不要设置Content-Type，让浏览器自动设置
+          if (options.body instanceof FormData) {
+            // 只添加认证相关的头，不包括Content-Type
+            const { 'Content-Type': _, ...authHeadersWithoutContentType } = authHeaders;
+            if (options.headers) {
+              options.headers = { ...authHeadersWithoutContentType, ...options.headers };
+            } else {
+              options.headers = authHeadersWithoutContentType;
+            }
           } else {
-            options.headers = authHeaders;
+            // 非FormData请求，正常添加所有头
+            if (options.headers) {
+              options.headers = { ...authHeaders, ...options.headers };
+            } else {
+              options.headers = authHeaders;
+            }
           }
           
           for (let i = 0; i < maxAttempts; i++) {
