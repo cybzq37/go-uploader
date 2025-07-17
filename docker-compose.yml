@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  go-uploader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-uploader
+    restart: unless-stopped
+    ports:
+      - "9876:9876"
+    volumes:
+      - ./data/upload:/app/upload
+      - ./data/merged:/app/merged
+      - ./data/logs:/app/logs
+      - ./config.json:/app/config.json:ro
+    environment:
+      - GIN_MODE=release
+      - TZ=Asia/Shanghai

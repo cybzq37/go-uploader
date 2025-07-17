@@ -1,0 +1,50 @@
+# Git相关
+.git
+.gitignore
+.gitattributes
+
+# 文档
+README.md
+*.md
+
+# 临时文件
+*.tmp
+*.swp
+*~
+
+# 编辑器配置
+.vscode/
+.idea/
+*.sublime-*
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 构建产物
+*.exe
+*.dll
+*.so
+*.dylib
+uploader
+go-uploader
+go-uploader.exe
+
+# 测试文件
+*_test.go
+testdata/
+
+# 上传和合并目录（运行时创建）
+upload/
+merged/
+logs/
+
+# Docker相关
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# 其他
+.env
+.env.local
+.env.production 
