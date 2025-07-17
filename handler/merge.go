@@ -25,8 +25,14 @@ func MergeChunks(c *gin.Context) {
 	relativePath := c.PostForm("relative_path") // 新增：文件相对路径
 	expectedMD5 := c.PostForm("expected_md5")   // 可选：期望的文件MD5
 
+	// 添加调试日志
+	log.Printf("合并请求参数: fileID=%s, filename=%s, totalChunksStr=%s, relativePath=%s", 
+		fileID, filename, totalChunksStr, relativePath)
+
 	// 验证必要参数
 	if fileID == "" || filename == "" || totalChunksStr == "" {
+		log.Printf("合并失败: 缺少必要参数 - fileID=%s, filename=%s, totalChunksStr=%s", 
+			fileID, filename, totalChunksStr)
 		c.JSON(400, gin.H{"error": "缺少必要参数"})
 		return
 	}
@@ -40,17 +46,27 @@ func MergeChunks(c *gin.Context) {
 	// 获取任务信息
 	task, exists := utils.Storage.GetTask(fileID)
 	if !exists {
+		log.Printf("合并失败: 任务不存在 - fileID=%s", fileID)
 		c.JSON(404, gin.H{"error": "任务不存在"})
 		return
 	}
+	
+	log.Printf("找到任务: fileID=%s, status=%s, totalChunks=%d", 
+		fileID, task.Status, task.TotalChunks)
 
 	// 验证所有分片是否已上传
 	uploadedChunks := utils.Storage.GetUploadedChunks(fileID)
+	log.Printf("分片上传验证: fileID=%s, 已上传=%d, 总共需要=%d, 任务中记录的总分片=%d", 
+		fileID, len(uploadedChunks), totalChunks, task.TotalChunks)
+	
 	if len(uploadedChunks) != totalChunks {
+		log.Printf("合并失败: 分片未完全上传 - fileID=%s, uploaded=%d, required=%d", 
+			fileID, len(uploadedChunks), totalChunks)
 		c.JSON(400, gin.H{
 			"error":          "分片未完全上传",
 			"uploaded":       len(uploadedChunks),
 			"total_required": totalChunks,
+			"uploaded_chunks": uploadedChunks,
 		})
 		return
 	}
@@ -74,11 +90,22 @@ func MergeChunks(c *gin.Context) {
 	}, utils.DefaultRetryConfig)
 
 	if err != nil {
-		// 更新任务状态为失败
+		// 更新任务状态为失败，但保留详细错误信息
 		task.Status = "failed"
+		task.RetryCount++
+		
+		// 记录失败原因到任务中（如果需要可以添加ErrorMessage字段）
+		log.Printf("文件合并失败 [%s]: %v, 重试次数: %d", fileID, err, task.RetryCount)
+		
 		utils.Storage.SaveTask(task)
 		
-		c.JSON(500, gin.H{"error": fmt.Sprintf("合并文件失败: %v", err)})
+		c.JSON(500, gin.H{
+			"error": fmt.Sprintf("合并文件失败: %v", err),
+			"file_id": fileID,
+			"retry_count": task.RetryCount,
+			"can_retry": true,
+			"message": "您可以使用恢复功能重新尝试合并",
+		})
 		return
 	}
 

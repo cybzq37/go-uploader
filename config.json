@@ -10,5 +10,7 @@
   "concurrent_uploads": 5,
   "enable_integrity_check": true,
   "enable_atomic_operations": true,
-  "log_level": "info"
+  "log_level": "info",
+  "secret_key": "xY3pQ7sT9vW2bE5kG8mJ1nL4rP6tR0uS",
+  "enable_auth": true
 }

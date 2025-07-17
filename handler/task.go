@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-uploader/utils"
 	"strconv"
+	"log"
 )
 
 // CreateFolderTask 创建文件夹任务
@@ -508,8 +509,9 @@ func ResumeTask(c *gin.Context) {
 		return
 	}
 
-	if task.Status != "paused" && task.Status != "failed" {
-		c.JSON(400, gin.H{"error": "只有暂停或失败的任务可以恢复"})
+	// 支持更多状态的恢复：paused, failed, partial_failed
+	if task.Status != "paused" && task.Status != "failed" && task.Status != "partial_failed" {
+		c.JSON(400, gin.H{"error": "只有暂停、失败或部分失败的任务可以恢复"})
 		return
 	}
 
@@ -517,12 +519,35 @@ func ResumeTask(c *gin.Context) {
 	task.Status = "uploading"
 	task.RetryCount++
 	
-	// 如果是文件夹任务，恢复所有暂停的子任务
+	// 重置失败的分片状态
+	if task.Chunks != nil {
+		for index, chunk := range task.Chunks {
+			if chunk.Status == "failed" {
+				chunk.Status = "pending"
+				chunk.RetryCount = 0
+				task.Chunks[index] = chunk
+			}
+		}
+	}
+	
+	// 如果是文件夹任务，恢复所有暂停或失败的子任务
 	if task.TaskType == "folder" {
 		for _, subTaskID := range task.SubTasks {
 			if subTask, exists := utils.Storage.GetTask(subTaskID); exists && (subTask.Status == "paused" || subTask.Status == "failed") {
 				subTask.Status = "uploading"
 				subTask.RetryCount++
+				
+				// 重置子任务的失败分片
+				if subTask.Chunks != nil {
+					for index, chunk := range subTask.Chunks {
+						if chunk.Status == "failed" {
+							chunk.Status = "pending"
+							chunk.RetryCount = 0
+							subTask.Chunks[index] = chunk
+						}
+					}
+				}
+				
 				utils.Storage.SaveTask(subTask)
 			}
 		}
@@ -541,5 +566,113 @@ func ResumeTask(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status":  "ok",
 		"message": message,
+	})
+} 
+
+// ResumeAllFailedTasks 批量恢复所有失败的任务
+func ResumeAllFailedTasks(c *gin.Context) {
+	if utils.Storage == nil {
+		c.JSON(500, gin.H{"error": "存储管理器未初始化"})
+		return
+	}
+
+	// 获取所有任务
+	allTasksMap := utils.Storage.GetAllTasks()
+	
+	resumedTasks := []string{}
+	failedToResume := []string{}
+	
+	for _, task := range allTasksMap {
+		// 只处理失败、暂停或部分失败的任务
+		if task.Status == "failed" || task.Status == "paused" || task.Status == "partial_failed" {
+			// 更新任务状态
+			task.Status = "uploading"
+			task.RetryCount++
+			
+			// 重置失败的分片状态
+			if task.Chunks != nil {
+				for index, chunk := range task.Chunks {
+					if chunk.Status == "failed" {
+						chunk.Status = "pending"
+						chunk.RetryCount = 0
+						task.Chunks[index] = chunk
+					}
+				}
+			}
+			
+			// 如果是文件夹任务，恢复所有失败的子任务
+			if task.TaskType == "folder" {
+				for _, subTaskID := range task.SubTasks {
+					if subTask, exists := utils.Storage.GetTask(subTaskID); exists && (subTask.Status == "paused" || subTask.Status == "failed") {
+						subTask.Status = "uploading"
+						subTask.RetryCount++
+						
+						// 重置子任务的失败分片
+						if subTask.Chunks != nil {
+							for index, chunk := range subTask.Chunks {
+								if chunk.Status == "failed" {
+									chunk.Status = "pending"
+									chunk.RetryCount = 0
+									subTask.Chunks[index] = chunk
+								}
+							}
+						}
+						
+						if err := utils.Storage.SaveTask(subTask); err != nil {
+							log.Printf("恢复子任务 %s 失败: %v", subTaskID, err)
+						}
+					}
+				}
+			}
+			
+			// 保存任务
+			if err := utils.Storage.SaveTask(task); err != nil {
+				log.Printf("恢复任务 %s 失败: %v", task.FileID, err)
+				failedToResume = append(failedToResume, task.FileID)
+			} else {
+				resumedTasks = append(resumedTasks, task.FileID)
+			}
+		}
+	}
+
+	response := gin.H{
+		"status": "ok",
+		"message": fmt.Sprintf("批量恢复完成，成功恢复 %d 个任务", len(resumedTasks)),
+		"resumed_count": len(resumedTasks),
+		"resumed_tasks": resumedTasks,
+	}
+	
+	if len(failedToResume) > 0 {
+		response["failed_count"] = len(failedToResume)
+		response["failed_tasks"] = failedToResume
+		response["message"] = fmt.Sprintf("批量恢复完成，成功恢复 %d 个任务，%d 个任务恢复失败", len(resumedTasks), len(failedToResume))
+	}
+
+	c.JSON(200, response)
+}
+
+// GetFailedTasks 获取所有失败的任务列表
+func GetFailedTasks(c *gin.Context) {
+	if utils.Storage == nil {
+		c.JSON(500, gin.H{"error": "存储管理器未初始化"})
+		return
+	}
+
+	// 获取所有任务
+	allTasksMap := utils.Storage.GetAllTasks()
+	
+	failedTasks := []*utils.UploadTask{}
+	
+	for _, task := range allTasksMap {
+		if task.Status == "failed" || task.Status == "partial_failed" {
+			failedTasks = append(failedTasks, task)
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"status": "ok",
+		"failed_tasks": failedTasks,
+		"total_failed": len(failedTasks),
+		"message": fmt.Sprintf("找到 %d 个失败的任务", len(failedTasks)),
 	})
 } 

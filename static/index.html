@@ -85,13 +85,60 @@
 </head>
 
 <body class="min-h-screen bg-gray-50">
-  <div x-data="fileUploadApp()" x-init="init()" class="container mx-auto px-4 py-4 max-w-6xl">
+  <!-- 密钥验证界面 -->
+  <div x-data="authApp()" x-show="!$store.auth.isAuthenticated" class="min-h-screen flex items-center justify-center bg-gray-50">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+          <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+          </svg>
+        </div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          文件上传系统
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+          请输入访问密钥以继续
+        </p>
+      </div>
+      <form class="mt-8 space-y-6" @submit.prevent="login()">
+        <div>
+          <label for="secret-key" class="sr-only">访问密钥</label>
+          <input id="secret-key" 
+                 x-model="secretKey" 
+                 name="secretKey" 
+                 type="password" 
+                 required 
+                 class="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                 placeholder="请输入访问密钥">
+        </div>
+        <div>
+          <button type="submit" 
+                  :disabled="isLoading"
+                  class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!isLoading">🔐 登录</span>
+            <span x-show="isLoading">⏳ 验证中...</span>
+          </button>
+        </div>
+        <div x-show="errorMessage" class="text-red-600 text-sm text-center" x-text="errorMessage"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 主应用界面 -->
+  <div x-data="fileUploadApp()" x-init="init()" x-show="$store.auth.isAuthenticated" class="container mx-auto px-4 py-4 max-w-6xl">
     
     <!-- 系统状态头部 -->
     <div class="card p-4 mb-4">
-      <h1 class="text-2xl font-bold text-gray-800 text-center mb-4">
-        文件上传系统
-      </h1>
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">
+          文件上传系统
+        </h1>
+        <button @click="logout()" 
+                class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors duration-200">
+          🚪 登出
+        </button>
+      </div>
       
       <!-- 系统状态指示器 -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -214,6 +261,45 @@
                     class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm transition-colors duration-200">
               🧹 清理
             </button>
+            <button @click="resumeAllFailedTasks()" 
+                    class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm transition-colors duration-200">
+              🔄 恢复失败任务
+            </button>
+            <button @click="showFailedTasks()" 
+                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm transition-colors duration-200">
+              ❌ 查看失败任务
+            </button>
+          </div>
+          
+          <!-- 任务状态筛选器 -->
+          <div x-show="(serverTasks || []).length > 0" class="mt-4 flex items-center gap-4">
+            <span class="text-sm font-medium text-gray-700">状态筛选：</span>
+            <select x-model="taskFilter" @change="filterTasks()" 
+                    class="text-sm border border-gray-300 rounded px-2 py-1">
+              <option value="all">全部任务</option>
+              <option value="uploading">上传中</option>
+              <option value="completed">已完成</option>
+              <option value="failed">失败</option>
+              <option value="partial_failed">部分失败</option>
+              <option value="paused">已暂停</option>
+              <option value="pending">等待中</option>
+            </select>
+            <span x-text="getFilteredTasksInfo()" class="text-sm text-gray-600"></span>
+          </div>
+          
+          <!-- 失败任务提醒 -->
+          <div x-show="getFailedTasksCount() > 0" 
+               class="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-red-700 font-medium" x-text="getFailedTasksMessage()"></span>
+            </div>
+            <button @click="resumeAllFailedTasks()" 
+                    class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm">
+              一键恢复
+            </button>
           </div>
           
           <div x-show="(serverTasks || []).length === 0" class="text-center py-8 text-gray-500">
@@ -222,7 +308,7 @@
           
           <div x-show="(serverTasks || []).length > 0" class="space-y-2 max-h-96 overflow-y-auto">    
             <!-- 服务器任务列表 -->
-            <template x-for="task in (serverTasks || [])" :key="task.task_id || task.file_id">
+            <template x-for="task in getFilteredTasks()" :key="task.task_id || task.file_id">
               <div>
                 <div class="bg-gray-50 rounded p-3 flex items-center justify-between" 
                      :class="task.task_type === 'folder' ? 'border-l-4 border-purple-400' : 'border-l-4 border-blue-400'">
@@ -272,7 +358,7 @@
                           class="text-xs px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded">
                     选择文件
                   </button>
-                  <button x-show="task.isPaused" 
+                  <button x-show="task.isPaused || task.status === 'failed' || task.status === 'partial_failed'" 
                         @click="resumeTask(task)"
                         class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded">
                     恢复
@@ -400,6 +486,121 @@
   </div>
 
   <script>
+    // 全局状态管理
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('auth', {
+        isAuthenticated: false,
+        
+        checkAuth() {
+          // 从Cookie检查认证状态
+          const cookies = document.cookie.split(';');
+          for (const cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'secret_key' && value) {
+              this.isAuthenticated = true;
+              return;
+            }
+          }
+          this.isAuthenticated = false;
+        },
+        
+        setAuthenticated(status) {
+          this.isAuthenticated = status;
+        }
+      });
+    });
+    
+    // 认证应用
+    function authApp() {
+      return {
+        secretKey: '',
+        isLoading: false,
+        errorMessage: '',
+        isAuthenticated: false,
+        
+        init() {
+          // 检查是否已经认证
+          this.checkAuthStatus();
+          // 初始化全局状态
+          Alpine.store('auth').checkAuth();
+        },
+        
+        async checkAuthStatus() {
+          try {
+            const response = await fetch('/go-uploader/auth/check');
+            const data = await response.json();
+            
+            if (data.success) {
+              this.isAuthenticated = true;
+              // 触发全局认证状态更新
+              Alpine.store('auth').setAuthenticated(true);
+            } else {
+              this.isAuthenticated = false;
+              Alpine.store('auth').setAuthenticated(false);
+            }
+          } catch (error) {
+            console.error('检查认证状态失败:', error);
+            this.isAuthenticated = false;
+            Alpine.store('auth').setAuthenticated(false);
+          }
+        },
+        
+        async login() {
+          if (!this.secretKey.trim()) {
+            this.errorMessage = '请输入访问密钥';
+            return;
+          }
+          
+          this.isLoading = true;
+          this.errorMessage = '';
+          
+          try {
+            const response = await fetch('/go-uploader/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                secret_key: this.secretKey
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              this.isAuthenticated = true;
+              Alpine.store('auth').setAuthenticated(true);
+              this.secretKey = '';
+              this.errorMessage = '';
+            } else {
+              this.errorMessage = data.message || '登录失败';
+            }
+          } catch (error) {
+            console.error('登录失败:', error);
+            this.errorMessage = '网络错误，请重试';
+          } finally {
+            this.isLoading = false;
+          }
+        },
+        
+        async logout() {
+          try {
+            await fetch('/go-uploader/auth/logout', {
+              method: 'POST'
+            });
+          } catch (error) {
+            console.error('登出失败:', error);
+          }
+          
+          this.isAuthenticated = false;
+          Alpine.store('auth').setAuthenticated(false);
+          this.secretKey = '';
+          this.errorMessage = '';
+        }
+      };
+    }
+    
+    // 文件上传应用
     function fileUploadApp() {
       return {        
         // 配置
@@ -413,6 +614,7 @@
         // 服务器任务
         serverTasks: [],
         recoveryPaths: {}, // 添加路径记忆存储
+        taskFilter: 'all', // 任务筛选条件
         
         // 进度和统计
         progress: {
@@ -474,10 +676,46 @@
           setInterval(() => this.refreshServerTasks(), 10000); // 定期刷新任务状态
         },
         
+        // 获取认证头
+        getAuthHeaders() {
+          const headers = {
+            'Content-Type': 'application/json',
+          };
+          
+          // 从Cookie中获取密钥
+          const cookies = document.cookie.split(';');
+          for (const cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'secret_key') {
+              headers['X-Secret-Key'] = value;
+              break;
+            }
+          }
+          
+          return headers;
+        },
+        
+        // 登出功能
+        async logout() {
+          try {
+            await fetch('/go-uploader/auth/logout', {
+              method: 'POST',
+              headers: this.getAuthHeaders()
+            });
+          } catch (error) {
+            console.error('登出失败:', error);
+          }
+          
+          // 重定向到登录页面
+          window.location.reload();
+        },
+        
         // 任务管理
         async refreshServerTasks() {
           try {
-            const response = await fetch('/go-uploader/tasks');
+            const response = await fetch('/go-uploader/tasks', {
+              headers: this.getAuthHeaders()
+            });
             const data = await response.json();
             this.serverTasks = data.tasks || [];
             
@@ -504,6 +742,61 @@
           this.taskStats.total = this.serverTasks.length;
           const completed = this.serverTasks.filter(t => t.status === 'completed').length;
           this.taskStats.successRate = this.taskStats.total > 0 ? ((completed / this.taskStats.total) * 100).toFixed(1) : 0;
+        },
+        
+        // 任务筛选功能
+        getFilteredTasks() {
+          if (this.taskFilter === 'all') {
+            return this.serverTasks || [];
+          }
+          return (this.serverTasks || []).filter(task => {
+            if (this.taskFilter === 'failed') {
+              return task.status === 'failed' || task.status === 'error';
+            }
+            return task.status === this.taskFilter;
+          });
+        },
+        
+        getFilteredTasksInfo() {
+          const filteredTasks = this.getFilteredTasks();
+          const totalTasks = this.serverTasks ? this.serverTasks.length : 0;
+          
+          if (this.taskFilter === 'all') {
+            return `共 ${totalTasks} 个任务`;
+          } else {
+            return `显示 ${filteredTasks.length} / ${totalTasks} 个任务`;
+          }
+        },
+        
+        filterTasks() {
+          // 筛选逻辑在 getFilteredTasks 中处理，这里可以添加额外的处理
+          this.log(`筛选任务: ${this.taskFilter}`, 'info');
+        },
+        
+        // 获取失败任务数量
+        getFailedTasksCount() {
+          if (!this.serverTasks) return 0;
+          return this.serverTasks.filter(task => 
+            task.status === 'failed' || task.status === 'error' || task.status === 'partial_failed'
+          ).length;
+        },
+        
+        // 获取失败任务提醒消息
+        getFailedTasksMessage() {
+          const count = this.getFailedTasksCount();
+          if (count === 0) return '';
+          
+          const partialFailedCount = this.serverTasks.filter(task => task.status === 'partial_failed').length;
+          const fullFailedCount = count - partialFailedCount;
+          
+          let message = `发现 ${count} 个失败任务`;
+          if (partialFailedCount > 0 && fullFailedCount > 0) {
+            message += ` (${fullFailedCount} 个完全失败，${partialFailedCount} 个部分失败)`;
+          } else if (partialFailedCount > 0) {
+            message += ` (${partialFailedCount} 个部分失败)`;
+          }
+          
+          return message;
         },
         
         // 验证和修正任务状态
@@ -975,7 +1268,9 @@
         async createRecoveryFolderTask(task, files) {
           try {
             // 获取任务详情
-            const response = await fetch('/go-uploader/tasks/' + task.task_id);
+            const response = await fetch('/go-uploader/tasks/' + task.task_id, {
+              headers: this.getAuthHeaders()
+            });
             const taskDetail = await response.json();
             
             if (!taskDetail.sub_tasks || taskDetail.sub_tasks.length === 0) {
@@ -1183,7 +1478,9 @@
         // 上传文件夹任务
         async uploadFolderTask(folderItem) {
           // 获取文件夹任务详情
-          const response = await fetch('/go-uploader/tasks/' + folderItem.task_id);
+          const response = await fetch('/go-uploader/tasks/' + folderItem.task_id, {
+            headers: this.getAuthHeaders()
+          });
           const taskDetail = await response.json();
           
           if (!taskDetail.sub_tasks || taskDetail.sub_tasks.length === 0) {
@@ -1444,6 +1741,14 @@
         async fetchWithRetry(url, options = {}, attempts = undefined) {
           const maxAttempts = attempts || this.config.retryCount;
           
+          // 添加认证头
+          const authHeaders = this.getAuthHeaders();
+          if (options.headers) {
+            options.headers = { ...authHeaders, ...options.headers };
+          } else {
+            options.headers = authHeaders;
+          }
+          
           for (let i = 0; i < maxAttempts; i++) {
             try {
               const response = await fetch(url, options);
@@ -1467,7 +1772,10 @@
           if (!confirm('确定要删除这个任务吗？')) return;
           
           try {
-            const response = await fetch('/go-uploader/tasks/' + fileId, { method: 'DELETE' });
+            const response = await fetch('/go-uploader/tasks/' + fileId, { 
+              method: 'DELETE',
+              headers: this.getAuthHeaders()
+            });
             if (response.ok) {
               this.showNotification('任务已删除', 'success');
               this.refreshServerTasks();
@@ -1484,7 +1792,10 @@
           if (!confirm('确定要清理所有已完成和失败的任务吗？')) return;
           
           try {
-            const response = await fetch('/go-uploader/tasks/cleanup', { method: 'POST' });
+            const response = await fetch('/go-uploader/tasks/cleanup', { 
+              method: 'POST',
+              headers: this.getAuthHeaders()
+            });
             if (response.ok) {
               const result = await response.json();
               this.showNotification(result.message, 'success');
@@ -1498,10 +1809,69 @@
           }
         },
         
+        // 批量恢复所有失败任务
+        async resumeAllFailedTasks() {
+          if (!confirm('确定要恢复所有失败的任务吗？')) return;
+          
+          try {
+            const response = await fetch('/go-uploader/tasks/resume_all_failed', { 
+              method: 'POST',
+              headers: this.getAuthHeaders()
+            });
+            if (response.ok) {
+              const result = await response.json();
+              this.showNotification(result.message, 'success');
+              this.refreshServerTasks();
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '批量恢复失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('批量恢复失败', 'error');
+          }
+        },
+        
+        // 显示失败任务列表
+        async showFailedTasks() {
+          try {
+            const response = await fetch('/go-uploader/tasks/failed', {
+              headers: this.getAuthHeaders()
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              const failedTasks = result.failed_tasks || [];
+              
+              if (failedTasks.length === 0) {
+                this.showNotification('当前没有失败的任务', 'info');
+                return;
+              }
+              
+              // 构建失败任务详情
+              let taskList = failedTasks.map(task => {
+                return `• ${task.filename || task.folder_name || task.file_id} (${task.status})`;
+              }).join('\n');
+              
+              const message = `找到 ${failedTasks.length} 个失败的任务：\n\n${taskList}\n\n是否要批量恢复这些任务？`;
+              
+              if (confirm(message)) {
+                this.resumeAllFailedTasks();
+              }
+            } else {
+              const error = await response.json();
+              this.showNotification(error.error || '获取失败任务列表失败', 'error');
+            }
+          } catch (error) {
+            this.showNotification('获取失败任务列表失败', 'error');
+          }
+        },
+        
         // 系统监控
         async checkSystemHealth() {
           try {
-            const response = await fetch('/go-uploader/health');
+            const response = await fetch('/go-uploader/health', {
+              headers: this.getAuthHeaders()
+            });
             const health = await response.json();
             this.systemHealth = health.status;
           } catch (error) {
@@ -1512,8 +1882,12 @@
         async updateSystemStatus() {
           try {
             const [metricsResponse, systemResponse] = await Promise.all([
-              fetch('/go-uploader/metrics'),
-              fetch('/go-uploader/system')
+              fetch('/go-uploader/metrics', {
+                headers: this.getAuthHeaders()
+              }),
+              fetch('/go-uploader/system', {
+                headers: this.getAuthHeaders()
+              })
             ]);
             
             if (metricsResponse.ok) {
@@ -1581,7 +1955,9 @@
         async showTaskDetail(task) {
           try {
             const taskId = task.task_id || task.file_id;
-            const response = await fetch('/go-uploader/tasks/' + taskId);
+            const response = await fetch('/go-uploader/tasks/' + taskId, {
+              headers: this.getAuthHeaders()
+            });
             const taskDetail = await response.json();
             
             if (taskDetail.task_type === 'folder') {
@@ -1789,6 +2165,7 @@
             'completed': 'bg-green-100 text-green-800',
             'error': 'bg-red-100 text-red-800',
             'failed': 'bg-red-100 text-red-800',
+            'partial_failed': 'bg-orange-100 text-orange-800',
             'paused': 'bg-gray-100 text-gray-800',
             'waiting_files': 'bg-orange-100 text-orange-800'
           };
@@ -1802,6 +2179,7 @@
             'completed': '完成',
             'error': '失败',
             'failed': '失败',
+            'partial_failed': '部分失败',
             'paused': '暂停',
             'waiting_files': '等待文件'
           };
@@ -1884,10 +2262,35 @@
           this.showNotification('已暂停任务: ' + (task.folder_name || task.filename), 'info');
         },
         // 恢复任务
-        resumeTask(task) {
-          if (!task.isPaused) return;
-          task.isPaused = false;
-          this.startUpload(task);
+        async resumeTask(task) {
+          // 如果是本地暂停状态，直接恢复
+          if (task.isPaused) {
+            task.isPaused = false;
+            this.startUpload(task);
+            return;
+          }
+          
+          // 如果是服务器端的失败状态，调用服务器恢复接口
+          if (task.status === 'failed' || task.status === 'partial_failed') {
+            try {
+              const taskId = task.task_id || task.file_id;
+              const response = await fetch(`/go-uploader/tasks/${taskId}/resume`, {
+                method: 'POST',
+                headers: this.getAuthHeaders()
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                this.showNotification(result.message || '任务已恢复', 'success');
+                this.refreshServerTasks(); // 刷新任务列表
+              } else {
+                const error = await response.json();
+                this.showNotification(error.error || '恢复任务失败', 'error');
+              }
+            } catch (error) {
+              this.showNotification('恢复任务失败', 'error');
+            }
+          }
         },
         // 取消任务
         cancelTask(task) {

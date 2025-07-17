@@ -46,33 +46,50 @@ func main() {
 			c.HTML(200, "index.html", nil)
 		})
 
-		// API路由
-		goUploader.POST("/upload_chunk", handler.UploadChunk)
-		goUploader.POST("/merge_chunks", handler.MergeChunks)
-		goUploader.GET("/upload_status", handler.UploadStatus)
-		
-		// 任务管理API
-		goUploader.GET("/tasks", handler.GetAllTasks)
-		goUploader.GET("/tasks/:file_id", handler.GetTask)
-		goUploader.DELETE("/tasks/:file_id", handler.DeleteTask)
-		goUploader.POST("/tasks/:file_id/pause", handler.PauseTask)
-		goUploader.POST("/tasks/:file_id/resume", handler.ResumeTask)
-		goUploader.POST("/tasks/cleanup", handler.CleanupTasks)
-		
-		// 文件夹任务API
-		goUploader.POST("/folder_tasks", handler.CreateFolderTask)
-		goUploader.GET("/folder_tasks/:folder_task_id/summary", handler.GetFolderTaskSummary)
-		goUploader.GET("/folder_tasks/:folder_task_id/sub_tasks", handler.GetSubTasks)
-		
-		// 监控和健康检查API
-		goUploader.GET("/health", handler.HealthCheck)
-		goUploader.GET("/system", handler.SystemInfo)
-		goUploader.GET("/metrics", handler.GetMetrics)
+		// 认证相关路由（不需要验证）
+		goUploader.POST("/auth/login", handler.Login)
+		goUploader.POST("/auth/logout", handler.Logout)
+		goUploader.GET("/auth/check", handler.CheckAuth)
+
+		// 应用认证中间件到所有其他API路由
+		api := goUploader.Group("")
+		api.Use(utils.AuthMiddleware())
+		{
+			// API路由
+			api.POST("/upload_chunk", handler.UploadChunk)
+			api.POST("/merge_chunks", handler.MergeChunks)
+			api.GET("/upload_status", handler.UploadStatus)
+			
+			// 任务管理API
+			api.GET("/tasks", handler.GetAllTasks)
+			api.GET("/tasks/:file_id", handler.GetTask)
+			api.DELETE("/tasks/:file_id", handler.DeleteTask)
+			api.POST("/tasks/:file_id/pause", handler.PauseTask)
+			api.POST("/tasks/:file_id/resume", handler.ResumeTask)
+			api.POST("/tasks/cleanup", handler.CleanupTasks)
+			api.POST("/tasks/resume_all_failed", handler.ResumeAllFailedTasks)
+			api.GET("/tasks/failed", handler.GetFailedTasks)
+			
+			// 文件夹任务API
+			api.POST("/folder_tasks", handler.CreateFolderTask)
+			api.GET("/folder_tasks/:folder_task_id/summary", handler.GetFolderTaskSummary)
+			api.GET("/folder_tasks/:folder_task_id/sub_tasks", handler.GetSubTasks)
+			
+			// 监控和健康检查API
+			api.GET("/health", handler.HealthCheck)
+			api.GET("/system", handler.SystemInfo)
+			api.GET("/metrics", handler.GetMetrics)
+		}
 	}
 
 	// 使用配置中的端口
 	port := fmt.Sprintf(":%s", utils.Config.Port)
 	log.Printf("服务器启动，监听端口: %s", utils.Config.Port)
+	if utils.Config.EnableAuth {
+		log.Printf("密钥验证已启用，密钥: %s", utils.Config.SecretKey)
+	} else {
+		log.Printf("密钥验证已禁用")
+	}
 	r.Run(port) // 监听端口
 }
 

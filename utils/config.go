@@ -20,6 +20,8 @@ type AppConfig struct {
 	EnableIntegrityCheck   bool   `json:"enable_integrity_check"`   // 启用完整性检查
 	EnableAtomicOperations bool   `json:"enable_atomic_operations"` // 启用原子操作
 	LogLevel               string `json:"log_level"`                // 日志级别
+	SecretKey              string `json:"secret_key"`               // 访问密钥
+	EnableAuth             bool   `json:"enable_auth"`              // 是否启用密钥验证
 }
 
 // Config 全局配置实例
@@ -36,6 +38,8 @@ var Config = AppConfig{
 	EnableIntegrityCheck:   true,
 	EnableAtomicOperations: true,
 	LogLevel:               "info",
+	SecretKey:              "your-secret-key-here", // 默认密钥
+	EnableAuth:             true,                   // 默认启用验证
 }
 
 // LoadConfig 从配置文件加载配置

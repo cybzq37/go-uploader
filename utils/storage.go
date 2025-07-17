@@ -229,8 +229,15 @@ func (s *TaskStorage) GetFolderTaskSummary(folderTaskID string) (*FolderTaskSumm
 		summary.Status = "completed"
 		folderTask.Status = "completed"
 		s.saveTaskFile(folderTask)
-	} else if summary.FailedFiles > 0 && summary.CompletedFiles+summary.FailedFiles == summary.TotalFiles {
-		summary.Status = "failed"
+	} else if summary.FailedFiles > 0 {
+		// 如果有失败的文件，但不是所有文件都完成或失败，保持上传状态允许重试
+		if summary.CompletedFiles+summary.FailedFiles == summary.TotalFiles {
+			// 所有文件都处理完了，但有失败的，状态设为 "partial_failed" 表示部分失败
+			summary.Status = "partial_failed"
+		} else {
+			// 还有文件在上传中，保持上传状态
+			summary.Status = "uploading"
+		}
 	} else {
 		summary.Status = "uploading"
 	}
