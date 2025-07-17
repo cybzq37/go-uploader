@@ -144,7 +144,7 @@
                 <option value="50">50MB</option>
                 <option value="100">100MB</option>
               </select>
-  </div>
+            </div>
   
             <div>
               <label class="block text-gray-700 text-sm font-medium mb-1">并发数量</label>
@@ -156,7 +156,7 @@
                 <option value="4">4</option>
                 <option value="5">5</option>
               </select>
-    </div>
+            </div>
             
             <div>
               <label class="block text-gray-700 text-sm font-medium mb-1">MD5校验</label>
@@ -165,7 +165,7 @@
                 <option value="true">启用</option>
                 <option value="false">禁用</option>
               </select>
-  </div>
+            </div>
   
             <div>
               <label class="block text-gray-700 text-sm font-medium mb-1">重试次数</label>
@@ -180,10 +180,9 @@
           </div>
         </div>
 
-                <!-- 文件上传区域 -->
+        <!-- 文件上传区域 -->
         <div class="card p-4">
           <h3 class="text-lg font-semibold text-gray-800 mb-3">📋 任务列表</h3>
-          
           <input type="file" 
                  x-ref="fileInput" 
                  @change="handleFileSelect($event)" 
@@ -200,12 +199,12 @@
             <button @click="selectFiles()" 
                     class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200"
                     title="选择文件进行上传">
-              📄 选择文件
+              📄 上传文件
             </button>
             <button @click="selectFolder()" 
                     class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm transition-colors duration-200"
                     title="选择文件夹进行上传">
-              📁 选择文件夹
+              📁 上传文件夹
             </button>
             <button @click="refreshServerTasks()" 
                     class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm transition-colors duration-200">
@@ -261,10 +260,25 @@
                 
                 <!-- 操作按钮 -->
                 <div class="mt-2 px-3 flex gap-2">
-                  <button x-show="task.status === 'paused' || task.status === 'failed' || task.status === 'uploading'" 
-                          @click="selectRecoveryTask(task.task_id || task.file_id, task.task_type)"
+                  <button x-show="!task.isPaused && !task.isUploading && (task.status === 'pending' || task.status === 'error')" 
+                          @click="startUpload(task)"
+                          class="text-xs px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded">
+                    开始
+                  </button>
+                  <button x-show="task.isUploading" 
+                          @click="pauseTask(task)"
+                          class="text-xs px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded">
+                    暂停
+                  </button>
+                  <button x-show="task.isPaused" 
+                          @click="resumeTask(task)"
                           class="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded">
                     恢复
+                  </button>
+                  <button x-show="task.isUploading || task.isPaused" 
+                          @click="cancelTask(task)"
+                          class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded">
+                    取消
                   </button>
                   <button @click="deleteTask(task.task_id || task.file_id)"
                           class="text-xs px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded">
@@ -283,7 +297,6 @@
         <!-- 操作日志 -->
         <div class="card p-4">
           <h3 class="text-lg font-semibold text-gray-800 mb-3">📝 操作日志</h3>
-          
           <div class="bg-gray-100 rounded p-3 max-h-48 overflow-y-auto font-mono text-xs">
             <template x-for="log in logs.slice(-30)" :key="log.id">
               <div class="mb-1">
@@ -298,43 +311,6 @@
       <!-- 侧边栏 -->
       <div class="space-y-4">
         
-        <!-- 上传进度 -->
-        <div class="card p-4">
-          <h3 class="text-lg font-semibold text-gray-800 mb-3">📊 上传进度</h3>
-          
-          <div class="mb-3">
-            <div class="flex justify-between text-gray-700 mb-2 text-sm">
-              <span x-text="progress.completed + '/' + progress.total + ' (' + progress.percentage.toFixed(1) + '%)'"></span>
-              <span x-text="remainingTime"></span>
-            </div>
-            
-            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full relative progress-shimmer transition-all duration-300" 
-                   :style="'width: ' + progress.percentage + '%'"></div>
-            </div>
-          </div>
-          
-          <!-- 统计信息 -->
-          <div class="grid grid-cols-2 gap-2 mb-3">
-            <div class="text-center p-2 bg-blue-50 rounded border border-blue-200">
-              <div class="text-lg font-bold text-gray-800" x-text="progress.completed"></div>
-              <div class="text-gray-600 text-xs">已完成</div>
-            </div>
-            <div class="text-center p-2 bg-red-50 rounded border border-red-200">
-              <div class="text-lg font-bold text-gray-800" x-text="progress.failed"></div>
-              <div class="text-gray-600 text-xs">失败</div>
-            </div>
-            <div class="text-center p-2 bg-green-50 rounded border border-green-200">
-              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.totalSize)"></div>
-              <div class="text-gray-600 text-xs">总大小</div>
-            </div>
-            <div class="text-center p-2 bg-purple-50 rounded border border-purple-200">
-              <div class="text-lg font-bold text-gray-800" x-text="formatFileSize(progress.uploadedSize)"></div>
-              <div class="text-gray-600 text-xs">已上传</div>
-            </div>
-          </div>
-        </div>
-
         <!-- 系统监控 -->
         <div class="card p-4">
           <h3 class="text-lg font-semibold text-gray-800 mb-3">📈 系统监控</h3>
@@ -418,12 +394,7 @@
 
   <script>
     function fileUploadApp() {
-      return {
-        // 基础状态
-        isUploading: false,
-        isPaused: false,
-        cancelFlag: false,
-        
+      return {        
         // 配置
         config: {
           chunkSize: 10,
@@ -473,7 +444,6 @@
         uploadSpeed: 0,
         lastUploadedBytes: 0,
         lastSpeedUpdate: Date.now(),
-        startTime: 0,
         
         // 初始化
         init() {
@@ -485,9 +455,6 @@
           // 加载记忆的文件路径
           this.loadRecoveryPaths();
           
-          // 检查未完成的任务（不自动弹窗）
-          this.checkUnfinishedTasks();
-          
           // 定时任务
           setInterval(() => this.updateSystemStatus(), 5000);
           setInterval(() => this.checkSystemHealth(), 30000);
@@ -495,6 +462,25 @@
           setInterval(() => this.refreshServerTasks(), 10000); // 定期刷新任务状态
         },
         
+        // 任务管理
+        async refreshServerTasks() {
+          try {
+            const response = await fetch('/go-uploader/tasks');
+            const data = await response.json();
+            this.serverTasks = data.tasks || [];
+            this.updateTaskStats();
+            this.log('刷新任务列表: 共 ' + this.serverTasks.length + ' 个任务', 'info');
+          } catch (error) {
+            this.log('获取服务器任务失败: ' + error.message, 'error');
+          }
+        },
+        
+        updateTaskStats() {
+          this.taskStats.total = this.serverTasks.length;
+          const completed = this.serverTasks.filter(t => t.status === 'completed').length;
+          this.taskStats.successRate = this.taskStats.total > 0 ? ((completed / this.taskStats.total) * 100).toFixed(1) : 0;
+        },
+
         // 文件路径记忆功能
         loadRecoveryPaths() {
           try {
@@ -509,18 +495,17 @@
           }
         },
         
+        // 保存文件路径到本地存储
         saveRecoveryPath(taskId, filePath, fileSize) {
-          // 保存文件路径到本地存储
           this.recoveryPaths[taskId] = {
             path: filePath,
             size: fileSize,
             timestamp: Date.now()
           };
-          
           try {
-            // 清理超过7天的记录
+            // 清理超过90天的记录
             const now = Date.now();
-            const oneWeek = 7 * 24 * 60 * 60 * 1000;
+            const oneWeek = 90 * 24 * 60 * 60 * 1000;
             
             Object.keys(this.recoveryPaths).forEach(key => {
               if (now - this.recoveryPaths[key].timestamp > oneWeek) {
@@ -534,16 +519,12 @@
           }
         },
         
-
-        
         // 统一文件选择处理
         selectFiles() {
-          this.showNotification('💡 提示：请选择要上传的文件', 'info');
           this.$refs.fileInput.click();
         },
         
         selectFolder() {
-          this.showNotification('💡 提示：请选择要上传的文件夹。系统会自动包含文件夹中的所有文件。', 'info');
           this.$refs.folderInput.click();
         },
         
@@ -554,10 +535,10 @@
           
           // 根据任务类型显示不同的提示
           if (taskType === 'folder') {
-            this.showNotification('💡 提示：请选择要恢复的文件夹。系统会自动包含文件夹中的所有文件。', 'info');
+            this.showNotification('💡 提示：请选择要恢复的文件夹。', 'info', 3000);
             this.$refs.folderInput.click();
           } else {
-            this.showNotification('💡 提示：请选择要恢复的文件', 'info');
+            this.showNotification('💡 提示：请选择要恢复的文件', 'info', 3000);
             this.$refs.fileInput.click();
           }
         },
@@ -688,31 +669,18 @@
         // 处理独立文件选择
         processIndividualFiles(files) {
           if (files.length === 0) return;
-          
           this.log('📄 处理独立文件: ' + files.length + ' 个文件', 'info');
-          
-          // 检查是否有匹配的未完成任务
           const matchedFiles = this.matchFilesWithTasks(files);
-          
           if (matchedFiles.matched.length > 0) {
-            // 有匹配的任务，询问用户是否要恢复
-            const shouldRecover = confirm(
-              '找到 ' + matchedFiles.matched.length + ' 个文件与未完成任务匹配，是否要恢复上传？\n' +
-              matchedFiles.matched.map(m => '- ' + m.file.name).join('\n')
-            );
-            
+            const shouldRecover = confirm('找到 ' + matchedFiles.matched.length + ' 个文件与未完成任务匹配，是否要恢复上传？\n' + matchedFiles.matched.map(m => '- ' + m.file.name).join('\n'));
             if (shouldRecover) {
-              // 恢复匹配的任务
               this.recoverMatchedFiles(matchedFiles.matched);
-              
-              // 添加未匹配的文件
               if (matchedFiles.unmatched.length > 0) {
                 this.addIndividualFilesToQueue(matchedFiles.unmatched);
               }
               return;
             }
           }
-          
           // 添加所有文件到队列
           this.addIndividualFilesToQueue(files);
         },
@@ -921,14 +889,9 @@
             
           } catch (error) {
             this.log('恢复文件夹任务失败: ' + error.message, 'error');
-            this.showNotification('恢复文件夹任务失败: ' + error.message, 'error');
           }
         },
-        
-
-        
-
-        
+                
         // 创建文件夹任务
         async createFolderTask(folderName, files) {
           try {
@@ -968,120 +931,63 @@
             await this.refreshServerTasks();
             
           } catch (error) {
-                          this.log('❌ 创建文件夹任务失败: ' + error.message, 'error');
+              this.log('❌ 创建文件夹任务失败: ' + error.message, 'error');
               this.showNotification('创建文件夹任务失败: ' + error.message, 'error');
           }
         },
         
         // 添加独立文件到队列（多文件上传，每个文件一个任务）
         async addIndividualFilesToQueue(files) {
-          // 这里应该调用后端API创建文件任务
-          // 暂时保留前端逻辑，但会在refreshServerTasks后同步
           this.log('添加了 ' + files.length + ' 个独立文件任务到上传队列', 'info');
           this.showNotification('已添加 ' + files.length + ' 个文件任务', 'success');
-          
           // 刷新服务器任务列表
           await this.refreshServerTasks();
+          // 给新任务加本地状态
+          this.serverTasks.forEach(task => {
+            if (task.isUploading === undefined) {
+              task.isUploading = false;
+              task.isPaused = false;
+              task.cancelFlag = false;
+            }
+          });
         },
         
         // 自动开始上传（如果需要）
         autoStartUploadIfNeeded() {
-          // 检查是否有待上传的任务
           const pendingTasks = this.serverTasks.filter(t => t.status === 'pending' || t.status === 'error' || t.status === 'uploading');
-          if (pendingTasks.length > 0 && !this.isUploading && !this.isPaused) {
-            this.log('检测到待上传任务，自动开始上传', 'info');
-            this.startUpload();
-          }
+          pendingTasks.forEach(task => {
+            if (!task.isUploading && !task.isPaused) {
+              this.startUpload(task);
+            }
+          });
         },
         
-        // 开始上传
-        async startUpload() {
-          if (this.isUploading) {
-            this.showNotification('上传已在进行中', 'warning');
+        // 开始上传（单任务）
+        async startUpload(task) {
+          if (task.isUploading) {
+            this.showNotification('该任务正在上传中', 'warning');
             return;
           }
-          
-          this.isUploading = true;
-          this.cancelFlag = false;
-          this.isPaused = false;
-          this.startTime = Date.now();
-          this.lastUploadedBytes = 0;
-          this.lastSpeedUpdate = Date.now();
-          
-          this.log('🚀 开始上传任务', 'info');
-          this.showNotification('开始上传任务', 'success');
-          
+          task.isUploading = true;
+          task.cancelFlag = false;
+          task.isPaused = false;
+          this.log('🚀 开始上传任务: ' + (task.folder_name || task.filename), 'info');
+          this.showNotification('开始上传任务: ' + (task.folder_name || task.filename), 'success');
           try {
-            await this.concurrentUpload();
-            this.log('✅ 所有任务上传完成', 'success');
-            this.showNotification('所有任务上传完成', 'success');
-          } catch (error) {
-            this.log('❌ 上传过程中出现错误: ' + error.message, 'error');
-            this.showNotification('上传过程中出现错误: ' + error.message, 'error');
-          } finally {
-            this.isUploading = false;
-            this.updateProgress();
-          }
-        },
-
-
-        
-
-        
-
-        
-        // 并发上传
-        async concurrentUpload() {
-          const pendingTasks = this.serverTasks.filter(t => t.status === 'pending' || t.status === 'error' || t.status === 'uploading');
-          this.log('并发上传开始，待处理任务: ' + pendingTasks.length + ' 个', 'info');
-          this.log('待处理任务列表: ' + pendingTasks.map(task => (task.folder_name || task.filename) + '(' + task.status + ')').join(', '), 'info');
-          
-          let index = 0;
-          const workers = [];
-          
-          // 定义上传工作函数
-          const uploadWorker = async () => {
-            while (index < pendingTasks.length && !this.cancelFlag && !this.isPaused) {
-              const taskIndex = index++;
-              const task = pendingTasks[taskIndex];
-              
-              if (!task || (task.status !== 'pending' && task.status !== 'error' && task.status !== 'uploading')) {
-                this.log('跳过任务: ' + (task ? (task.folder_name || task.filename) : 'null') + ' - 状态: ' + (task ? task.status : 'null'), 'info');
-                continue;
-              }
-              
-              // 更新任务状态为上传中
-              task.status = 'uploading';
-              this.log('开始上传任务: ' + (task.folder_name || task.filename) + ' (类型: ' + task.task_type + ')', 'info');
-              this.updateProgress();
-              
-              try {
-                if (task.task_type === 'folder') {
-                  await this.uploadFolderTask(task);
-                } else {
-                  await this.uploadSingleFile(task);
-                }
-                task.status = 'completed';
-                task.completion_rate = 100;
-                this.progress.completed++;
-                this.log('✅ 完成: ' + (task.folder_name || task.filename), 'success');
-              } catch (error) {
-                task.status = 'error';
-                this.progress.failed++;
-                this.log('❌ 失败: ' + (task.folder_name || task.filename) + ' - ' + error.message, 'error');
-              }
-              
-              this.updateProgress();
+            if (task.task_type === 'folder') {
+              await this.uploadFolderTask(task);
+            } else {
+              await this.uploadSingleFile(task);
             }
-          };
-          
-          // 创建多个工作线程
-          for (let i = 0; i < this.config.concurrent; i++) {
-            workers.push(uploadWorker());
+            task.status = 'completed';
+            task.completion_rate = 100;
+            this.log('✅ 完成: ' + (task.folder_name || task.filename), 'success');
+          } catch (error) {
+            task.status = 'error';
+            this.log('❌ 失败: ' + (task.folder_name || task.filename) + ' - ' + error.message, 'error');
+          } finally {
+            task.isUploading = false;
           }
-          
-          // 等待所有工作线程完成
-          await Promise.all(workers);
         },
         
         // 上传文件夹任务
@@ -1114,11 +1020,7 @@
             // 遍历未完成的子任务
             const uncompletedTasks = matchedFiles.filter(m => !m.isCompleted);
             
-            for (const match of uncompletedTasks) {
-              if (this.cancelFlag || this.isPaused) {
-                throw new Error('上传被中断');
-              }
-              
+            for (const match of uncompletedTasks) {             
               const subTask = match.subTask;
               const file = match.file;
               
@@ -1175,11 +1077,7 @@
           let totalProgress = 0;
           
           // 为每个文件创建上传任务
-          const filePromises = files.map(async (file, index) => {
-            if (this.cancelFlag || this.isPaused) {
-              throw new Error('上传被中断');
-            }
-            
+          const filePromises = files.map(async (file, index) => {  
             const subTaskId = subTasks[index];
             const fileItem = {
               id: subTaskId,
@@ -1212,7 +1110,7 @@
           this.log('📁 文件夹上传完成: ' + folderItem.folderName, 'success');
         },
         
-                // 单文件上传
+        // 单文件上传
         async uploadSingleFile(fileItem) {
           if (fileItem.isRecovered && !fileItem.file) {
             // 恢复的任务，无法继续上传（因为没有原始文件对象）
@@ -1245,7 +1143,7 @@
 
           // 上传分片
           for (let i = 0; i < totalChunks; i++) {
-            if (this.cancelFlag || this.isPaused) {
+            if (fileItem.cancelFlag || fileItem.isPaused) {
               throw new Error('上传被中断');
             }
             
@@ -1295,7 +1193,7 @@
           }
         },
 
-      // 合并文件
+        // 合并文件
         async mergeFile(fileId, file, totalChunks) {
           const formData = new FormData();
           formData.append('file_id', fileId);
@@ -1365,23 +1263,6 @@
             }
           }
         },
-        
-        // 任务管理
-        async refreshServerTasks() {
-          try {
-            const response = await fetch('/go-uploader/tasks');
-            const data = await response.json();
-            this.serverTasks = data.tasks || [];
-            this.updateTaskStats();
-            this.log('刷新任务列表: 共 ' + this.serverTasks.length + ' 个任务', 'info');
-          } catch (error) {
-                          this.log('获取服务器任务失败: ' + error.message, 'error');
-          }
-        },
-        
-
-        
-
         
         async deleteTask(fileId) {
           if (!confirm('确定要删除这个任务吗？')) return;
@@ -1457,14 +1338,14 @@
         },
         
         updateUploadSpeed() {
-          if (!this.isUploading || this.isPaused) {
+          // 只统计正在上传的任务
+          const uploading = this.serverTasks.some(t => t.isUploading);
+          if (!uploading) {
             this.uploadSpeed = 0;
             return;
           }
-          
           const now = Date.now();
           const timeDiff = (now - this.lastSpeedUpdate) / 1000;
-          
           if (timeDiff >= 1) {
             const bytesDiff = this.lastUploadedBytes;
             this.uploadSpeed = bytesDiff / timeDiff;
@@ -1472,41 +1353,6 @@
             this.lastSpeedUpdate = now;
           }
         },
-        
-        // 检查未完成任务（不自动弹窗）
-        async checkUnfinishedTasks() {
-          try {
-            this.log('正在检查未完成的任务...', 'info');
-            
-            const response = await fetch('/go-uploader/tasks');
-            const data = await response.json();
-            const serverTasks = data.tasks || [];
-            
-            // 过滤出未完成的任务
-            const unfinishedTasks = serverTasks.filter(task => 
-              task.status === 'uploading' || task.status === 'paused' || task.status === 'failed'
-            );
-            
-            // 保存未完成任务列表，供后续使用
-            this.unfinishedTasks = unfinishedTasks;
-            
-            if (unfinishedTasks.length > 0) {
-              this.log('发现 ' + unfinishedTasks.length + ' 个未完成的任务，可在任务列表中点击"选择文件恢复"按钮进行恢复', 'info');
-            } else {
-              this.log('没有发现未完成的任务', 'info');
-            }
-          } catch (error) {
-            this.log('检查未完成任务失败: ' + error.message, 'error');
-          }
-        },
-        
-
-        
-
-        
-
-        
-
         
         // 详情和模态框
         async showTaskDetail(task) {
@@ -1675,26 +1521,7 @@
         
         // 更新和计算
         updateChunkSize() {
-                      this.log('分片大小调整为: ' + this.config.chunkSize + 'MB', 'info');
-        },
-        
-        updateProgress() {
-          // 使用服务器任务来计算进度
-          this.progress.total = this.serverTasks.length;
-          this.progress.completed = this.serverTasks.filter(t => t.status === 'completed').length;
-          this.progress.failed = this.serverTasks.filter(t => t.status === 'failed' || t.status === 'error').length;
-          this.progress.percentage = this.progress.total > 0 ? (this.progress.completed / this.progress.total) * 100 : 0;
-          
-          this.progress.totalSize = this.serverTasks.reduce((sum, t) => sum + (t.file_size || 0), 0);
-          this.progress.uploadedSize = this.serverTasks
-            .filter(t => t.status === 'completed')
-            .reduce((sum, t) => sum + (t.file_size || 0), 0);
-        },
-        
-        updateTaskStats() {
-          this.taskStats.total = this.serverTasks.length;
-          const completed = this.serverTasks.filter(t => t.status === 'completed').length;
-          this.taskStats.successRate = this.taskStats.total > 0 ? ((completed / this.taskStats.total) * 100).toFixed(1) : 0;
+          this.log('分片大小调整为: ' + this.config.chunkSize + 'MB', 'info');
         },
         
         // UI辅助方法
@@ -1797,20 +1624,6 @@
           return texts[this.systemHealth] || '未知';
         },
         
-        get totalFileSize() {
-          return this.serverTasks.reduce((sum, t) => sum + (t.file_size || 0), 0);
-        },
-        
-        get remainingTime() {
-          if (this.progress.completed > 0 && this.startTime > 0) {
-            const elapsed = (Date.now() - this.startTime) / 1000;
-            const rate = this.progress.completed / elapsed;
-            const remaining = (this.progress.total - this.progress.completed) / rate;
-            return this.formatTime(remaining);
-          }
-          return '--:--:--';
-        },
-        
         // 工具方法
         formatFileSize(bytes) {
           if (bytes === 0) return '0 B';
@@ -1838,7 +1651,26 @@
           return new Promise(resolve => setTimeout(resolve, ms));
         },
         
-
+        // 暂停任务
+        pauseTask(task) {
+          task.isPaused = true;
+          task.isUploading = false;
+          this.log('⏸️ 已暂停任务: ' + (task.folder_name || task.filename), 'info');
+          this.showNotification('已暂停任务: ' + (task.folder_name || task.filename), 'info');
+        },
+        // 恢复任务
+        resumeTask(task) {
+          if (!task.isPaused) return;
+          task.isPaused = false;
+          this.startUpload(task);
+        },
+        // 取消任务
+        cancelTask(task) {
+          task.cancelFlag = true;
+          task.isUploading = false;
+          this.log('❌ 已取消任务: ' + (task.folder_name || task.filename), 'info');
+          this.showNotification('已取消任务: ' + (task.folder_name || task.filename), 'info');
+        },
       };
     }
   </script>
